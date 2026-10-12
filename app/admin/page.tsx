@@ -79,11 +79,31 @@ export default function AdminPage() {
       <div className="max-w-4xl mx-auto">
 
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold text-jumar-brown">🌿 لوحة تحكم جُمار</h1>
           <div className="text-sm text-gray-500">
             {orders.length} طلب إجمالي
           </div>
+        </div>
+
+        {/* Quick nav */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <a href="/admin/inventory"
+            className="bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 hover:border hover:border-jumar-gold transition-all">
+            <span className="text-2xl">📦</span>
+            <div>
+              <p className="font-bold text-jumar-brown text-sm">المخزون</p>
+              <p className="text-xs text-gray-400">الخامات والأرصدة</p>
+            </div>
+          </a>
+          <a href="/admin/finance"
+            className="bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 hover:border hover:border-jumar-gold transition-all">
+            <span className="text-2xl">💰</span>
+            <div>
+              <p className="font-bold text-jumar-brown text-sm">الماليات</p>
+              <p className="text-xs text-gray-400">إيرادات ومصروفات</p>
+            </div>
+          </a>
         </div>
 
         {/* Stats */}
