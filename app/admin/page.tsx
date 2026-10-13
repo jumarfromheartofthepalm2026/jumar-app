@@ -159,14 +159,14 @@ function OrdersTab() {
   }, [])
 
   const fetchSales = useCallback(async () => {
-    const { data } = await supabase.from('sales').select('sale_date, amount, total_qty, channel').order('sale_date', { ascending: false }).limit(90)
+    const { data } = await supabase.from('sales').select('sale_date, amount, qty_tamriya, qty_fudge, qty_sultana, qty_snickers_fool, qty_snickers_bunduq, channel').order('sale_date', { ascending: false }).limit(90)
     if (!data) return
     const today = new Date().toISOString().split('T')[0]
     const byDate: Record<string, number> = {}
     data.forEach(r => { byDate[r.sale_date] = (byDate[r.sale_date] || 0) + Number(r.amount) })
     setSales({
       totalRevenue: data.reduce((s, r) => s + Number(r.amount), 0),
-      totalQty: data.reduce((s, r) => s + Number(r.total_qty), 0),
+      totalQty: data.reduce((s, r) => s + (Number(r.qty_tamriya)||0)+(Number(r.qty_fudge)||0)+(Number(r.qty_sultana)||0)+(Number(r.qty_snickers_fool)||0)+(Number(r.qty_snickers_bunduq)||0), 0),
       todayRevenue: data.filter(r => r.sale_date === today).reduce((s, r) => s + Number(r.amount), 0),
       onlineOrders: data.filter(r => r.channel === 'أونلاين').length,
       bazaarRevenue: data.filter(r => r.channel === 'بازار').reduce((s, r) => s + Number(r.amount), 0),
@@ -725,7 +725,8 @@ function FinanceTab() {
   }
 
   // إجمالي COGS من المبيعات
-  const totalQtySold = sales.reduce((s, r) => s + (r.total_qty || 0), 0)
+  const saleQty = (r: Sale) => (r.qty_tamriya||0)+(r.qty_fudge||0)+(r.qty_sultana||0)+(r.qty_snickers_fool||0)+(r.qty_snickers_bunduq||0)
+  const totalQtySold = sales.reduce((s, r) => s + saleQty(r), 0)
   const avgCogPerPiece = Object.keys(RECIPES).length > 0
     ? Object.keys(RECIPES).reduce((s, p) => s + cogPerPiece(p), 0) / Object.keys(RECIPES).length
     : 0
@@ -1340,7 +1341,7 @@ function BazaarTab() {
   }, [])
 
   async function loadSummary(activeDay?: string) {
-    const { data } = await supabase.from('sales').select('sale_date, amount, total_qty, notes').eq('channel', 'بازار').in('sale_date', BAZAAR_DATES)
+    const { data } = await supabase.from('sales').select('sale_date, amount, notes').eq('channel', 'بازار').in('sale_date', BAZAAR_DATES)
     if (!data) return
     function parseQty(notes: string) {
       const qm = notes.match(/qty:(\d+)/), gm = notes.match(/gift:(\d+)/)
