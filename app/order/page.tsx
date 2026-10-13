@@ -63,6 +63,22 @@ export default function OrderPage() {
     setOrderNum(num)
     setStep('done')
     setLoading(false)
+
+    // إشعار واتساب تلقائي للأدمن
+    const flavorLine = Object.entries(flavors)
+      .filter(([,q]) => q > 0)
+      .map(([k, q]) => `${FLAVORS.find(f => f.key === k)?.label} x${q}`)
+      .join(' | ')
+    const msg = encodeURIComponent(
+      `🛒 طلب جديد ${num}\n` +
+      `👤 ${form.name}\n` +
+      `📱 ${form.phone}\n` +
+      `📍 ${form.address}\n` +
+      `📦 ${selectedPkg.label} — ${selectedPkg.price}ج\n` +
+      `🍬 ${flavorLine}` +
+      (form.notes ? `\n📝 ${form.notes}` : '')
+    )
+    window.open(`https://wa.me/201110330052?text=${msg}`, '_blank')
   }
 
   const brown = '#3D2310'
