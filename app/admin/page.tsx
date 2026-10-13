@@ -338,8 +338,8 @@ function InventoryTab() {
   const [adjustForm, setAdjustForm] = useState({ ingredient_id: '', grams: '', note: '' })
   const [msg, setMsg] = useState('')
 
-  // علب جاهزة
-  const [readyBoxes, setReadyBoxes] = useState<Record<string, Record<number, number>>>({})
+  // علب جاهزة — عدد لكل حجم فقط
+  const [readyBoxes, setReadyBoxes] = useState<Record<number, number>>({})
   // حاسبة الإنتاج
   const [calcPlan, setCalcPlan] = useState<Record<string, Record<number, number>>>({})
 
@@ -357,11 +357,8 @@ function InventoryTab() {
   const fetchBoxes = useCallback(async () => {
     const { data } = await supabase.from('ready_boxes').select('*')
     if (!data) return
-    const map: Record<string, Record<number, number>> = {}
-    data.forEach((r: any) => {
-      if (!map[r.product]) map[r.product] = {}
-      map[r.product][r.box_size] = r.qty
-    })
+    const map: Record<number, number> = {}
+    data.forEach((r: any) => { map[r.box_size] = (map[r.box_size] || 0) + r.qty })
     setReadyBoxes(map)
   }, [])
 
@@ -416,10 +413,10 @@ function InventoryTab() {
     setMsg('تم تصحيح الجرد ✅'); fetchAll()
   }
 
-  async function updateBoxQty(product: string, size: number, delta: number) {
-    const cur = readyBoxes[product]?.[size] || 0
+  async function updateBoxQty(size: number, delta: number) {
+    const cur = readyBoxes[size] || 0
     const newQty = Math.max(0, cur + delta)
-    await supabase.from('ready_boxes').upsert({ product, box_size: size, qty: newQty }, { onConflict: 'product,box_size' })
+    await supabase.from('ready_boxes').upsert({ box_size: size, qty: newQty }, { onConflict: 'box_size' })
     fetchBoxes()
   }
 
@@ -522,35 +519,27 @@ function InventoryTab() {
           {tab === 'boxes' && (
             <div className="space-y-3">
               <p className="text-xs text-gray-400 text-center mb-2">عدد العلب الجاهزة للبيع — اضغط + / − لتحديث الرقم</p>
-              {Object.keys(RECIPES).map(product => (
-                <div key={product} className="bg-white rounded-2xl p-4 shadow-sm">
-                  <p className="font-bold text-jumar-brown mb-3">{product}</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {BOX_SIZES.map(({ label, pieces }) => {
-                      const qty = readyBoxes[product]?.[pieces] || 0
-                      return (
-                        <div key={pieces} className="bg-jumar-cream rounded-xl p-3 text-center">
-                          <p className="text-xs text-gray-500 mb-1">{label}</p>
-                          <p className={`text-2xl font-bold mb-2 ${qty === 0 ? 'text-gray-300' : qty < 3 ? 'text-red-500' : 'text-jumar-brown'}`}>{qty}</p>
-                          <div className="flex gap-1 justify-center">
-                            <button onClick={() => updateBoxQty(product, pieces, -1)} className="w-8 h-8 rounded-lg bg-white shadow-sm text-gray-600 font-bold hover:bg-red-50 hover:text-red-600 transition-all">−</button>
-                            <button onClick={() => updateBoxQty(product, pieces, 1)} className="w-8 h-8 rounded-lg bg-jumar-brown text-white font-bold hover:opacity-90 transition-all">+</button>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
-              {/* إجمالي */}
-              <div className="bg-jumar-brown text-white rounded-2xl p-4">
-                <p className="text-sm text-white/70 mb-2">إجمالي العلب الجاهزة</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {BOX_SIZES.map(({ label, pieces }) => {
-                    const total = Object.values(readyBoxes).reduce((s, prod) => s + (prod[pieces] || 0), 0)
-                    return <div key={pieces} className="text-center"><p className="text-2xl font-bold text-jumar-gold">{total}</p><p className="text-xs text-white/60">{label}</p></div>
-                  })}
-                </div>
+              <div className="grid grid-cols-1 gap-3">
+                {BOX_SIZES.map(({ label, pieces }) => {
+                  const qty = readyBoxes[pieces] || 0
+                  return (
+                    <div key={pieces} className="bg-white rounded-2xl p-4 shadow-sm flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-jumar-brown text-lg">{label}</p>
+                        <p className="text-xs text-gray-400">{pieces} قطعة</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => updateBoxQty(pieces, -1)} className="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 text-xl font-bold hover:bg-red-50 hover:text-red-600 transition-all">−</button>
+                        <span className={`text-3xl font-bold w-12 text-center ${qty === 0 ? 'text-gray-300' : qty < 3 ? 'text-red-500' : 'text-jumar-brown'}`}>{qty}</span>
+                        <button onClick={() => updateBoxQty(pieces, 1)} className="w-10 h-10 rounded-xl bg-jumar-brown text-white text-xl font-bold hover:opacity-90 transition-all">+</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="bg-jumar-brown text-white rounded-2xl p-4 text-center">
+                <p className="text-white/70 text-sm mb-1">إجمالي العلب</p>
+                <p className="text-4xl font-bold text-jumar-gold">{Object.values(readyBoxes).reduce((s, v) => s + v, 0)}</p>
               </div>
             </div>
           )}
