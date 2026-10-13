@@ -1,307 +1,527 @@
 'use client'
 
-import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { PRODUCTS, BOXES } from '@/lib/types'
+import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
 
-const INSTAPAY_NUMBER = '01110330052'
-const INSTAPAY_NAME = 'جُمار'
+// ── Translations ────────────────────────────────────────────
+const t = {
+  ar: {
+    ticker: ['🚚 توصيل مجاني داخل التجمع الخامس حتى ٣١ أكتوبر', '🏪 بازار لوتس ٢٢–٢٤ أكتوبر', '✨ هدايا مميزة للعلب الكبيرة'],
+    nav: { story: 'قصتنا', menu: 'المنيو', pricing: 'الأسعار', order: 'اطلب الآن' },
+    heroTag: '🌴 من قلب النخلة',
+    heroTitle: ['سناك فاخر'],
+    heroSub: 'بدون سكر مضاف · بدون ألوان صناعية · بدون مواد حافظة\nفقط التمر المصري الأصيل في أبهى صوره',
+    orderNow: 'اطلب الآن',
+    viewMenu: 'شاهد المنيو',
+    badge1: '100% طبيعي',
+    badge2: 'شوجر فري',
+    badge3: 'صنع يدوي',
+    badge4: 'توصيل سريع',
+    deliveryBanner: '🚚 توصيل مجاني داخل التجمع الخامس حتى ٣١ أكتوبر',
+    menuTitle: 'المنيو',
+    menuSub: 'خمس نكهات، كل واحدة قصة',
+    price: '٤٠ جنيه / قطعة',
+    seasonal: 'قريباً · نكهات موسمية',
+    seasonalDesc: 'نكهات حصرية بمناسبة المواسم والأعياد — ترقّبونا!',
+    storyTitle: 'قصة جُمار',
+    storySub: 'من أيدينا إلى بيتك',
+    storyQ1: 'ليه صعب تلاقي حاجة حلوة وصحية في نفس الوقت؟',
+    storyQ2: 'ليه كل ما تقرأ المكونات تلاقي سكر وألوان ومواد حافظة؟',
+    storyQ3: 'ليه الحلويات الطبيعية دايماً إما غالية أوي أو مش لذيذة؟',
+    storyText: 'جُمار جاء إجابة لكل الأسئلة دي.',
+    storyMeaning: 'ليه جُمار؟',
+    storyMeaningText: 'جُمار هو قلب النخلة — أطيب ما فيها وأنظفه. ودي بالظبط فلسفتنا: نوصّلك أحسن ما في التمر. كل قطعة معمولة بإيدينا في التجمع الخامس — وبتلاقينا في البازارات وأونلاين ستور نوصلك على بيتك مباشرة.',
+    pricingTitle: 'الأسعار',
+    pricingSub: 'كلما زاد، كلما وفّرت',
+    piece: 'قطعة',
+    pieces2: 'قطعتين',
+    box5: 'علبة ٥',
+    box8: 'علبة ٨',
+    box15: 'علبة ١٥',
+    box24: 'علبة ٢٤',
+    gift: '+{n} هدية',
+    popular: 'الأكثر طلبًا',
+    reviewsTitle: 'ماذا قالوا؟',
+    reviewsSub: 'آراء حقيقية من عملاء جُمار',
+    ctaTitle: 'جاهز تجرب جُمار؟',
+    ctaSub: 'اطلب دلوقتي وهنوصّلك على بيتك',
+    ctaBtn: 'اطلب الآن',
+    ctaWa: 'تواصل عبر واتساب',
+    footerTagline: 'من قلب النخلة · من أيدينا إلى بيتك',
+    footerLinks: ['قصتنا', 'المنيو', 'الأسعار', 'اطلب الآن'],
+    footerContact: 'تواصل معنا',
+    footerLocation: 'أونلاين ستور · التجمع الخامس · القاهرة',
+    footerDelivery: '🚚 توصيل مجاني داخل التجمع حتى ٣١/١٠',
+    footerBazaar: '🏪 بازار لوتس ٢٢-٢٤ أكتوبر ٢٠٢٦',
+    copyright: '© ٢٠٢٦ جُمار · جميع الحقوق محفوظة',
+    dir: 'rtl',
+  },
+  en: {
+    ticker: ['🚚 Free delivery inside Fifth Settlement until Oct 31', '🏪 Lotus Bazaar Oct 22–24', '✨ Gift extras on large boxes'],
+    nav: { story: 'Our Story', menu: 'Menu', pricing: 'Pricing', order: 'Order Now' },
+    heroTag: '🌴 From the Heart of the Palm',
+    heroTitle: ['Premium Snack'],
+    heroSub: 'No added sugar · No artificial colors · No preservatives\nOnly authentic Egyptian dates at their finest',
+    orderNow: 'Order Now',
+    viewMenu: 'View Menu',
+    badge1: '100% Natural',
+    badge2: 'Sugar Free',
+    badge3: 'Handmade',
+    badge4: 'Fast Delivery',
+    deliveryBanner: '🚚 Free delivery inside Fifth Settlement until Oct 31',
+    menuTitle: 'Menu',
+    menuSub: 'Five flavors, each a story',
+    price: '40 EGP / piece',
+    seasonal: 'Coming Soon · Seasonal Flavors',
+    seasonalDesc: 'Exclusive flavors for special occasions and holidays — stay tuned!',
+    storyTitle: 'The Jumar Story',
+    storySub: 'From our hands to your home',
+    storyQ1: 'Why is it so hard to find something sweet and healthy at once?',
+    storyQ2: 'Why does every ingredient list contain sugar, colors, and preservatives?',
+    storyQ3: 'Why are natural sweets always either too expensive or not tasty?',
+    storyText: 'Jumar was born as the answer to all these questions.',
+    storyMeaning: 'Why Jumar?',
+    storyMeaningText: 'Jumar is the heart of the palm tree — its purest, most precious part. That is exactly our philosophy: to bring you the best the date has to offer. Every piece is handmade in Fifth Settlement — find us at bazaars or order online for home delivery.',
+    pricingTitle: 'Pricing',
+    pricingSub: 'The more you order, the more you save',
+    piece: '1 piece',
+    pieces2: '2 pieces',
+    box5: 'Box of 5',
+    box8: 'Box of 8',
+    box15: 'Box of 15',
+    box24: 'Box of 24',
+    gift: '+{n} gift',
+    popular: 'Most Popular',
+    reviewsTitle: 'What They Said',
+    reviewsSub: 'Real reviews from Jumar customers',
+    ctaTitle: 'Ready to Try Jumar?',
+    ctaSub: 'Order now and we\'ll deliver to your door',
+    ctaBtn: 'Order Now',
+    ctaWa: 'Chat on WhatsApp',
+    footerTagline: 'From the heart of the palm · From our hands to your home',
+    footerLinks: ['Our Story', 'Menu', 'Pricing', 'Order Now'],
+    footerContact: 'Contact Us',
+    footerLocation: 'Online Store · Fifth Settlement · Cairo',
+    footerDelivery: '🚚 Free delivery in Fifth Settlement until 31/10',
+    footerBazaar: '🏪 Lotus Bazaar Oct 22–24, 2026',
+    copyright: '© 2026 Jumar · All rights reserved',
+    dir: 'ltr',
+  },
+  fr: {
+    ticker: ['🚚 Livraison gratuite au Fifth Settlement jusqu\'au 31 oct', '🏪 Bazar Lotus 22–24 oct', '✨ Cadeaux offerts sur les grandes boîtes'],
+    nav: { story: 'Notre histoire', menu: 'Menu', pricing: 'Tarifs', order: 'Commander' },
+    heroTag: '🌴 Du Cœur du Palmier',
+    heroTitle: ['Snack Premium'],
+    heroSub: 'Sans sucre ajouté · Sans colorants artificiels · Sans conservateurs\nSeulement les meilleures dattes égyptiennes',
+    orderNow: 'Commander',
+    viewMenu: 'Voir le menu',
+    badge1: '100% Naturel',
+    badge2: 'Sans sucre',
+    badge3: 'Fait main',
+    badge4: 'Livraison rapide',
+    deliveryBanner: '🚚 Livraison gratuite au Fifth Settlement jusqu\'au 31 octobre',
+    menuTitle: 'Menu',
+    menuSub: 'Cinq saveurs, chacune une histoire',
+    price: '40 EGP / pièce',
+    seasonal: 'Bientôt · Saveurs Saisonnières',
+    seasonalDesc: 'Saveurs exclusives pour les occasions spéciales — restez à l\'écoute !',
+    storyTitle: 'L\'histoire de Jumar',
+    storySub: 'De nos mains à votre maison',
+    storyQ1: 'Pourquoi est-il si difficile de trouver quelque chose de sucré et sain à la fois ?',
+    storyQ2: 'Pourquoi chaque liste d\'ingrédients contient du sucre, des colorants et des conservateurs ?',
+    storyQ3: 'Pourquoi les douceurs naturelles sont-elles toujours trop chères ou pas assez savoureuses ?',
+    storyText: 'Jumar est né comme réponse à toutes ces questions.',
+    storyMeaning: 'Pourquoi Jumar ?',
+    storyMeaningText: 'Jumar est le cœur du palmier — sa partie la plus pure et la plus précieuse. C\'est exactement notre philosophie : vous apporter le meilleur de la datte. Chaque pièce est faite à la main au Fifth Settlement — trouvez-nous aux bazars ou commandez en ligne.',
+    pricingTitle: 'Tarifs',
+    pricingSub: 'Plus vous commandez, plus vous économisez',
+    piece: '1 pièce',
+    pieces2: '2 pièces',
+    box5: 'Boîte de 5',
+    box8: 'Boîte de 8',
+    box15: 'Boîte de 15',
+    box24: 'Boîte de 24',
+    gift: '+{n} cadeau',
+    popular: 'Plus populaire',
+    reviewsTitle: 'Ce qu\'ils ont dit',
+    reviewsSub: 'Vrais avis de clients Jumar',
+    ctaTitle: 'Prêt à essayer Jumar ?',
+    ctaSub: 'Commandez maintenant et nous livrons chez vous',
+    ctaBtn: 'Commander',
+    ctaWa: 'WhatsApp',
+    footerTagline: 'Du cœur du palmier · De nos mains à votre maison',
+    footerLinks: ['Notre histoire', 'Menu', 'Tarifs', 'Commander'],
+    footerContact: 'Contactez-nous',
+    footerLocation: 'Boutique en ligne · Fifth Settlement · Le Caire',
+    footerDelivery: '🚚 Livraison gratuite au Fifth Settlement jusqu\'au 31/10',
+    footerBazaar: '🏪 Bazar Lotus 22–24 octobre 2026',
+    copyright: '© 2026 Jumar · Tous droits réservés',
+    dir: 'ltr',
+  },
+}
 
-const DELIVERY_ZONES = [
-  { label: 'داخل التجمع الخامس', fee: 50 },
-  { label: 'باقي القاهرة والجيزة', fee: 85 },
-  { label: 'الإسكندرية', fee: 95 },
+type Lang = 'ar' | 'en' | 'fr'
+
+const PRODUCTS = [
+  { key: 'tamriya', nameAr: 'تمرية الطحينة', nameEn: 'Tahini Tamriya', nameFr: 'Tamriya Tahini', ingAr: 'تمر مجدول + طحينة ناعمة + سمسم محمّص', ingEn: 'Medjool dates + smooth tahini + toasted sesame', ingFr: 'Dattes Medjool + tahini + sésame grillé', img: '/products/chocolate.jpg' },
+  { key: 'fudge', nameAr: 'فدج الكاجو', nameEn: 'Cashew Fudge', nameFr: 'Fudge Cajou', ingAr: 'تمر مجدول + كاجو مطحون + زبدة طبيعية', ingEn: 'Medjool dates + ground cashew + natural butter', ingFr: 'Dattes Medjool + noix de cajou + beurre naturel', img: '/products/cashew.jpg' },
+  { key: 'sultana', nameAr: 'سلطانة الفستق', nameEn: 'Pistachio Sultana', nameFr: 'Sultane Pistache', ingAr: 'تمر مجدول + فستق حلبي مختار', ingEn: 'Medjool dates + selected pistachio', ingFr: 'Dattes Medjool + pistache sélectionnée', img: '/products/pistachio.jpg' },
+  { key: 'snickers_fool', nameAr: 'سنيكرز الفول السوداني', nameEn: 'Peanut Snickers', nameFr: 'Snickers Cacahuète', ingAr: 'تمر مجدول + فول سوداني محمّص + شوكولاتة دارك بلجيكية شوجر فري', ingEn: 'Medjool dates + roasted peanuts + Belgian dark chocolate sugar-free', ingFr: 'Dattes Medjool + cacahuètes grillées + chocolat belge noir sans sucre', img: '/products/box-pieces.jpg' },
+  { key: 'snickers_bunduq', nameAr: 'سنيكرز البندق', nameEn: 'Hazelnut Snickers', nameFr: 'Snickers Noisette', ingAr: 'تمر مجدول + بندق + شوكولاتة دارك بلجيكية شوجر فري', ingEn: 'Medjool dates + hazelnuts + Belgian dark chocolate sugar-free', ingFr: 'Dattes Medjool + noisettes + chocolat belge noir sans sucre', img: '/products/branded-box.jpg' },
 ]
 
-export default function OrderPage() {
-  const [boxIdx, setBoxIdx] = useState(0)
-  const [quantities, setQuantities] = useState<Record<string, number>>(
-    Object.fromEntries(PRODUCTS.map(p => [p.key, 0]))
-  )
-  const [form, setForm] = useState({ name: '', phone: '', whatsapp: '', address: '', notes: '' })
-  const [zoneIdx, setZoneIdx] = useState<number | null>(null)
-  const [paymentMethod, setPaymentMethod] = useState<'instapay' | 'cash'>('cash')
-  const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState<{ orderId: string; payment: 'instapay' | 'cash'; price: number } | null>(null)
-  const [error, setError] = useState('')
+const PRICING = [
+  { labelKey: 'piece' as const, qty: 1, gift: 0, price: 40, featured: false },
+  { labelKey: 'pieces2' as const, qty: 2, gift: 0, price: 70, featured: false },
+  { labelKey: 'box8' as const, qty: 8, gift: 2, price: 260, featured: false },
+  { labelKey: 'box15' as const, qty: 15, gift: 3, price: 450, featured: true },
+  { labelKey: 'box24' as const, qty: 24, gift: 4, price: 650, featured: false },
+]
 
-  const box = BOXES[boxIdx]
-  const totalQty = Object.values(quantities).reduce((a, b) => a + b, 0)
-  const remaining = box.qty - totalQty
-  const deliveryFee = zoneIdx !== null ? DELIVERY_ZONES[zoneIdx].fee : 0
-  const totalPrice = box.price + deliveryFee
+const REVIEWS = [
+  { text: 'علبة تمر jumar مشكل تحفة الطعم جربت تمرية الطحينة والفدج وسنيكرز والكل لذيذ', author: 'عميلة جُمار', source: 'واتساب' },
+  { text: 'خطير كله والله عجبني جدا وباكل فيهم كل يوم على الريق', author: 'عميل جُمار', source: 'واتساب' },
+  { text: 'ابني حب المنتج جدا بشكركم صراحه تحفه · الكاجو بجد اكتر من رائعه · Top taste', author: 'عميلة جُمار', source: 'فيسبوك' },
+]
 
-  function setQty(key: string, val: number) {
-    const newQty = { ...quantities, [key]: Math.max(0, val) }
-    const total = Object.values(newQty).reduce((a, b) => a + b, 0)
-    if (total <= box.qty) setQuantities(newQty)
-  }
+export default function HomePage() {
+  const [lang, setLang] = useState<Lang>('ar')
+  const [tickerIdx, setTickerIdx] = useState(0)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const T = t[lang]
+  const isRtl = lang === 'ar'
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!form.name || !form.phone || zoneIdx === null) {
-      setError('من فضلك أكملي البيانات المطلوبة واختاري منطقة التوصيل')
-      return
-    }
-    if (totalQty !== box.qty) {
-      setError(`لازم تختاري ${box.qty} قطعة بالظبط — باقي ${remaining}`)
-      return
-    }
+  // Rotating ticker
+  useEffect(() => {
+    const id = setInterval(() => setTickerIdx(i => (i + 1) % T.ticker.length), 4000)
+    return () => clearInterval(id)
+  }, [lang, T.ticker.length])
 
-    setLoading(true)
-    setError('')
-
-    const zoneName = DELIVERY_ZONES[zoneIdx].label
-
-    try {
-      const { data: customer, error: custErr } = await supabase
-        .from('customers')
-        .insert({
-          name: form.name,
-          phone: form.phone,
-          whatsapp: form.whatsapp || form.phone,
-          area: zoneName,
-          address: form.address,
-        })
-        .select()
-        .single()
-
-      if (custErr) throw custErr
-
-      const { data: order, error: orderErr } = await supabase
-        .from('orders')
-        .insert({
-          customer_id: customer.id,
-          status: 'new',
-          box_qty: box.qty,
-          total_price: totalPrice,
-          notes: `المنطقة: ${zoneName} | التوصيل: ${deliveryFee} ج | الدفع: ${paymentMethod === 'instapay' ? 'InstaPay مقدم' : 'كاش عند الاستلام'}` + (form.notes ? ` | ${form.notes}` : ''),
-        })
-        .select()
-        .single()
-
-      if (orderErr) throw orderErr
-
-      const items = PRODUCTS
-        .filter(p => quantities[p.key] > 0)
-        .map(p => ({ order_id: order.id, product_name: p.name, quantity: quantities[p.key] }))
-
-      const { error: itemsErr } = await supabase.from('order_items').insert(items)
-      if (itemsErr) throw itemsErr
-
-      setSuccess({ orderId: order.id, payment: paymentMethod, price: totalPrice })
-    } catch (err: any) {
-      setError('حصل خطأ، حاولي تاني')
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (success) {
-    if (success.payment === 'instapay') return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-jumar-cream">
-        <div className="text-center bg-white rounded-2xl p-8 shadow-lg max-w-sm w-full">
-          <div className="text-5xl mb-4">💳</div>
-          <h2 className="text-2xl font-bold text-jumar-brown mb-2">خطوة أخيرة!</h2>
-          <p className="text-gray-600 mb-6">حوّلي المبلغ على InstaPay وابعتي screenshot على واتساب</p>
-
-          <div className="bg-jumar-cream rounded-xl p-4 mb-4 text-right space-y-2">
-            <p className="text-sm text-gray-500">رقم InstaPay</p>
-            <p className="text-2xl font-bold text-jumar-brown tracking-widest">{INSTAPAY_NUMBER}</p>
-            <p className="text-sm text-gray-500">باسم: {INSTAPAY_NAME}</p>
-            <p className="text-xl font-bold text-jumar-gold mt-2">{success.price} جنيه</p>
-          </div>
-
-          <a
-            href={`https://wa.me/2${INSTAPAY_NUMBER}?text=${encodeURIComponent(`طلب جُمار ✅\nتم الدفع على InstaPay — ${success.price} ج\nالاسم: ${form.name}`)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full bg-green-500 text-white font-bold py-3 rounded-xl mb-3 hover:opacity-90"
-          >
-            📲 ابعتي الـ screenshot على واتساب
-          </a>
-
-          <p className="text-xs text-gray-400">جُمار — من قلب النخلة 🌴</p>
-        </div>
-      </div>
-    )
-
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-jumar-cream">
-        <div className="text-center bg-white rounded-2xl p-10 shadow-lg max-w-sm w-full">
-          <div className="text-6xl mb-4">🌿</div>
-          <h2 className="text-2xl font-bold text-jumar-brown mb-2">تم استلام طلبك!</h2>
-          <p className="text-gray-600">هنتواصل معاكِ قريباً على واتساب لتأكيد موعد التوصيل.</p>
-          <p className="text-gray-500 text-sm mt-2">الدفع: كاش عند الاستلام 💵</p>
-          <p className="text-jumar-gold font-bold mt-3">{success.price} جنيه</p>
-          <p className="text-sm text-gray-400 mt-4">جُمار — من قلب النخلة 🌴</p>
-        </div>
-      </div>
-    )
-  }
+  const productName = (p: typeof PRODUCTS[0]) =>
+    lang === 'ar' ? p.nameAr : lang === 'en' ? p.nameEn : p.nameFr
+  const productIng = (p: typeof PRODUCTS[0]) =>
+    lang === 'ar' ? p.ingAr : lang === 'en' ? p.ingEn : p.ingFr
 
   return (
-    <div className="min-h-screen bg-jumar-cream py-8 px-4">
-      <div className="max-w-lg mx-auto">
+    <div dir={T.dir} style={{ fontFamily: "'Cairo', 'Noto Sans Arabic', system-ui, sans-serif" }}>
 
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-jumar-brown">جُمار 🌿</h1>
-          <p className="text-jumar-gold mt-1 text-sm font-semibold">تمريات طبيعية — بدون سكر، بدون ألوان، بدون مواد صناعية</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-
-          {/* Box Size */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <h2 className="font-bold text-jumar-brown text-lg mb-3">اختاري حجم العلبة</h2>
-            <div className="grid grid-cols-3 gap-3">
-              {BOXES.map((b, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => { setBoxIdx(i); setQuantities(Object.fromEntries(PRODUCTS.map(p => [p.key, 0]))) }}
-                  className={`p-3 rounded-xl border-2 text-center transition-all ${
-                    boxIdx === i
-                      ? 'border-jumar-gold bg-jumar-gold/10 text-jumar-brown font-bold'
-                      : 'border-gray-200 text-gray-600'
-                  }`}
-                >
-                  <div className="text-xl font-bold">{b.qty}</div>
-                  <div className="text-xs">قطعة</div>
-                  <div className="text-sm font-semibold mt-1">{b.price} ج</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Products */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="font-bold text-jumar-brown text-lg">وزّعي القطع</h2>
-              <span className={`text-sm font-semibold px-3 py-1 rounded-full ${
-                remaining === 0 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-              }`}>
-                {remaining === 0 ? '✅ اكتملت' : `باقي ${remaining}`}
-              </span>
-            </div>
-            <div className="space-y-3">
-              {PRODUCTS.map(p => (
-                <div key={p.key} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                  <div>
-                    <p className="font-semibold text-gray-800">{p.name}</p>
-                    <p className="text-xs text-gray-400">{p.desc}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button type="button" onClick={() => setQty(p.key, quantities[p.key] - 1)}
-                      className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 font-bold hover:bg-gray-200">−</button>
-                    <span className="w-6 text-center font-bold text-jumar-brown">{quantities[p.key]}</span>
-                    <button type="button" onClick={() => setQty(p.key, quantities[p.key] + 1)}
-                      className="w-8 h-8 rounded-full bg-jumar-gold/20 text-jumar-brown font-bold hover:bg-jumar-gold/40">+</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Delivery Zone */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <h2 className="font-bold text-jumar-brown text-lg mb-3">منطقة التوصيل</h2>
-            <div className="space-y-2">
-              {DELIVERY_ZONES.map((zone, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setZoneIdx(i)}
-                  className={`w-full flex justify-between items-center p-3 rounded-xl border-2 text-right transition-all ${
-                    zoneIdx === i
-                      ? 'border-jumar-gold bg-jumar-gold/10 text-jumar-brown font-bold'
-                      : 'border-gray-200 text-gray-600'
-                  }`}
-                >
-                  <span className="font-semibold text-jumar-gold">{zone.fee} ج</span>
-                  <span>{zone.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Customer Info */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
-            <h2 className="font-bold text-jumar-brown text-lg">بياناتك</h2>
-            <input required placeholder="الاسم *" value={form.name}
-              onChange={e => setForm({ ...form, name: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
-            <input required placeholder="رقم الهاتف *" value={form.phone} type="tel"
-              onChange={e => setForm({ ...form, phone: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
-            <input placeholder="رقم واتساب (لو مختلف)" value={form.whatsapp} type="tel"
-              onChange={e => setForm({ ...form, whatsapp: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
-            <input placeholder="العنوان بالتفصيل" value={form.address}
-              onChange={e => setForm({ ...form, address: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
-            <textarea placeholder="ملاحظات" value={form.notes}
-              onChange={e => setForm({ ...form, notes: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold resize-none h-20" />
-          </div>
-
-          {/* Payment Method */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <h2 className="font-bold text-jumar-brown text-lg mb-3">طريقة الدفع</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <button type="button" onClick={() => setPaymentMethod('cash')}
-                className={`p-4 rounded-xl border-2 text-center transition-all ${
-                  paymentMethod === 'cash'
-                    ? 'border-jumar-gold bg-jumar-gold/10 text-jumar-brown font-bold'
-                    : 'border-gray-200 text-gray-600'
-                }`}>
-                <div className="text-2xl mb-1">💵</div>
-                <div className="text-sm font-semibold">كاش عند الاستلام</div>
-              </button>
-              <button type="button" onClick={() => setPaymentMethod('instapay')}
-                className={`p-4 rounded-xl border-2 text-center transition-all ${
-                  paymentMethod === 'instapay'
-                    ? 'border-jumar-gold bg-jumar-gold/10 text-jumar-brown font-bold'
-                    : 'border-gray-200 text-gray-600'
-                }`}>
-                <div className="text-2xl mb-1">💳</div>
-                <div className="text-sm font-semibold">InstaPay مقدم</div>
-              </button>
-            </div>
-          </div>
-
-          {error && <p className="text-red-600 text-center text-sm">{error}</p>}
-
-          {/* Summary & Submit */}
-          <div className="bg-jumar-brown text-white rounded-2xl p-5">
-            <div className="flex justify-between mb-2">
-              <span>{box.price} ج</span>
-              <span>علبة {box.qty} قطعة</span>
-            </div>
-            <div className="flex justify-between mb-2 text-sm text-white/70">
-              <span>{zoneIdx !== null ? `${deliveryFee} ج` : '—'}</span>
-              <span>توصيل {zoneIdx !== null ? DELIVERY_ZONES[zoneIdx].label : ''}</span>
-            </div>
-            <div className="flex justify-between mb-4 border-t border-white/20 pt-2">
-              <span className="font-bold text-jumar-gold text-lg">{zoneIdx !== null ? `${totalPrice} ج` : '—'}</span>
-              <span className="font-bold">الإجمالي</span>
-            </div>
-            <div className="flex justify-between mb-4 text-sm text-white/70">
-              <span>{paymentMethod === 'instapay' ? '💳 InstaPay مقدم' : '💵 كاش عند الاستلام'}</span>
-              <span>الدفع</span>
-            </div>
-            <button type="submit" disabled={loading}
-              className="w-full bg-jumar-gold text-jumar-brown font-bold py-4 rounded-xl text-lg hover:opacity-90 transition disabled:opacity-50">
-              {loading ? 'جارٍ الإرسال...' : '🌿 اطلبي دلوقتي'}
-            </button>
-          </div>
-
-        </form>
-
-        <p className="text-center text-xs text-gray-400 mt-6">جُمار — من قلب النخلة 🌴</p>
+      {/* ── TICKER ─────────────────────────────────────── */}
+      <div style={{
+        background: '#3D2310', color: '#C9A84C',
+        textAlign: 'center', padding: '0.55rem 1rem',
+        fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.05em',
+        transition: 'opacity 0.4s',
+      }}>
+        {T.ticker[tickerIdx]}
       </div>
+
+      {/* ── NAV ─────────────────────────────────────────── */}
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 200,
+        background: 'rgba(250,245,235,0.95)',
+        backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid rgba(201,168,76,0.18)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 1.5rem', height: 64,
+      }}>
+        <a href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+          <Image src="/logo.jpg" alt="جُمار" width={110} height={55} style={{ height: 48, width: 'auto', objectFit: 'contain' }} priority />
+        </a>
+
+        {/* Desktop links */}
+        <ul style={{ display: 'flex', gap: '1.5rem', listStyle: 'none', alignItems: 'center', margin: 0, padding: 0 }}
+          className="nav-desktop">
+          <li><a href="#story" style={navLinkStyle}>{T.nav.story}</a></li>
+          <li><a href="#menu" style={navLinkStyle}>{T.nav.menu}</a></li>
+          <li><a href="#pricing" style={navLinkStyle}>{T.nav.pricing}</a></li>
+          <li>
+            <Link href="/order" style={{ background: '#3D2310', color: '#C9A84C', padding: '0.45rem 1.2rem', borderRadius: '2rem', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 700 }}>
+              {T.nav.order}
+            </Link>
+          </li>
+        </ul>
+
+        {/* Language switcher */}
+        <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+          {(['ar', 'en', 'fr'] as Lang[]).map(l => (
+            <button key={l} onClick={() => setLang(l)} style={{
+              padding: '0.2rem 0.55rem', borderRadius: '1rem', border: '1.5px solid',
+              borderColor: lang === l ? '#C9A84C' : 'rgba(201,168,76,0.3)',
+              background: lang === l ? '#3D2310' : 'transparent',
+              color: lang === l ? '#C9A84C' : '#7A5C3A',
+              fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.05em',
+            }}>
+              {l.toUpperCase()}
+            </button>
+          ))}
+          {/* Mobile hamburger */}
+          <button onClick={() => setMenuOpen(o => !o)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: '#3D2310', padding: '0.3rem', marginInlineStart: '0.5rem' }}
+            className="nav-mobile-btn">
+            {menuOpen ? '✕' : '☰'}
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile menu */}
+      {menuOpen && (
+        <div style={{
+          position: 'fixed', top: 64, right: 0, left: 0, zIndex: 199,
+          background: '#FAF5EB', borderBottom: '1px solid rgba(201,168,76,0.18)',
+          padding: '1rem 1.5rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem',
+        }}>
+          {[['#story', T.nav.story], ['#menu', T.nav.menu], ['#pricing', T.nav.pricing]].map(([href, label]) => (
+            <a key={href} href={href} onClick={() => setMenuOpen(false)} style={{ ...navLinkStyle, fontSize: '1rem' }}>{label}</a>
+          ))}
+          <Link href="/order" onClick={() => setMenuOpen(false)} style={{ background: '#3D2310', color: '#C9A84C', padding: '0.7rem 1.2rem', borderRadius: '2rem', textDecoration: 'none', fontSize: '1rem', fontWeight: 700, textAlign: 'center' }}>
+            {T.nav.order}
+          </Link>
+        </div>
+      )}
+
+      {/* ── HERO ────────────────────────────────────────── */}
+      <section style={{
+        position: 'relative', minHeight: '92vh',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        textAlign: 'center', padding: '4rem 1.5rem', overflow: 'hidden',
+        background: 'radial-gradient(ellipse 70% 60% at 50% 120%, rgba(201,168,76,0.18) 0%, transparent 70%), radial-gradient(ellipse 40% 30% at 80% 20%, rgba(237,224,200,0.6) 0%, transparent 60%), #FAF5EB',
+      }}>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 780 }}>
+          <span style={{
+            display: 'inline-block', fontSize: '0.7rem', fontWeight: 700,
+            letterSpacing: '0.25em', textTransform: 'uppercase', color: '#C9A84C',
+            border: '1.5px solid rgba(201,168,76,0.4)', padding: '0.35rem 1rem',
+            borderRadius: '2rem', marginBottom: '2rem',
+          }}>{T.heroTag}</span>
+
+          {/* Emblem */}
+          <div style={{
+            width: 200, height: 200,
+            margin: '0 auto 2.5rem',
+            filter: 'drop-shadow(0 20px 50px rgba(61,35,16,0.25))',
+          }}>
+            <Image src="/logo.jpg" alt="جُمار" width={200} height={200} style={{ width: '100%', height: '100%', objectFit: 'contain' }} priority />
+          </div>
+
+          <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(2.8rem,8vw,5.5rem)', fontWeight: 700, color: '#3D2310', lineHeight: 1.1, marginBottom: '1.5rem' }}>
+            {T.heroTitle[0]}
+          </h1>
+
+          <p style={{ fontSize: 'clamp(1rem,2.5vw,1.2rem)', color: '#7A5C3A', lineHeight: 1.8, marginBottom: '2.5rem', whiteSpace: 'pre-line' }}>
+            {T.heroSub}
+          </p>
+
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link href="/order" style={btnPrimaryStyle}>{T.orderNow}</Link>
+            <a href="#menu" style={btnSecondaryStyle}>{T.viewMenu}</a>
+          </div>
+        </div>
+      </section>
+
+      {/* ── BADGES ──────────────────────────────────────── */}
+      <div style={{ background: '#EDE0C8', padding: '0.8rem 1rem', display: 'flex', justifyContent: 'center', gap: 'clamp(1rem,4vw,3rem)', flexWrap: 'wrap' }}>
+        {[T.badge1, T.badge2, T.badge3, T.badge4].map(b => (
+          <span key={b} style={{ fontSize: '0.78rem', fontWeight: 700, color: '#3D2310', letterSpacing: '0.1em', textTransform: 'uppercase' }}>✦ {b}</span>
+        ))}
+      </div>
+
+      {/* ── DELIVERY BANNER ─────────────────────────────── */}
+      <div style={{ background: 'linear-gradient(135deg,#3D2310,#5C3D1E)', color: '#C9A84C', textAlign: 'center', padding: '1rem', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '0.05em' }}>
+        {T.deliveryBanner}
+      </div>
+
+      {/* ── MENU ────────────────────────────────────────── */}
+      <section id="menu" style={{ padding: 'clamp(3rem,6vw,5rem) 1.5rem', background: '#FAF5EB' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <p style={sectionTagStyle}>🌿 {T.menuTitle}</p>
+          <h2 style={sectionTitleStyle}>{T.menuSub}</h2>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '1.5rem', marginTop: '2.5rem' }}>
+            {PRODUCTS.map(p => (
+              <div key={p.key} style={{ background: '#fff', borderRadius: '1.5rem', overflow: 'hidden', boxShadow: '0 4px 20px rgba(61,35,16,0.08)', border: '1px solid rgba(201,168,76,0.15)', transition: 'transform 0.2s, box-shadow 0.2s' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 32px rgba(61,35,16,0.14)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = ''; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 20px rgba(61,35,16,0.08)' }}>
+                <div style={{ position: 'relative', height: 180 }}>
+                  <Image src={p.img} alt={productName(p)} fill style={{ objectFit: 'cover' }} />
+                </div>
+                <div style={{ padding: '1.2rem' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#3D2310', marginBottom: '0.4rem' }}>{productName(p)}</h3>
+                  <p style={{ fontSize: '0.75rem', color: '#7A5C3A', lineHeight: 1.6 }}>{productIng(p)}</p>
+                  <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#C9A84C', marginTop: '0.8rem' }}>{T.price}</p>
+                </div>
+              </div>
+            ))}
+
+            {/* Seasonal coming soon */}
+            <div style={{ background: 'linear-gradient(135deg,#3D2310,#5C3D1E)', borderRadius: '1.5rem', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.2rem', textAlign: 'center', minHeight: 300 }}>
+              <span style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🌙</span>
+              <h3 style={{ color: '#C9A84C', fontWeight: 700, fontSize: '1rem', marginBottom: '0.6rem' }}>{T.seasonal}</h3>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', lineHeight: 1.6 }}>{T.seasonalDesc}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── STORY ────────────────────────────────────────── */}
+      <section id="story" style={{ padding: 'clamp(3rem,6vw,5rem) 1.5rem', background: '#EDE0C8' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: '3rem', alignItems: 'center' }}>
+          {/* Photo grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: 'auto auto', gap: '0.75rem' }}>
+            {['/products/pistachio.jpg', '/products/chocolate.jpg', '/products/hero.jpg', '/products/branded-box.jpg'].map((src, i) => (
+              <div key={i} style={{ borderRadius: '1rem', overflow: 'hidden', aspectRatio: i === 2 ? '2/1' : '1/1', gridColumn: i === 2 ? '1 / -1' : undefined, position: 'relative', height: i === 2 ? 160 : 140 }}>
+                <Image src={src} alt="" fill style={{ objectFit: 'cover' }} />
+              </div>
+            ))}
+          </div>
+
+          {/* Text */}
+          <div>
+            <p style={sectionTagStyle}>✨ {T.storyTitle}</p>
+            <h2 style={{ ...sectionTitleStyle, textAlign: isRtl ? 'right' : 'left' }}>{T.storySub}</h2>
+            <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {[T.storyQ1, T.storyQ2, T.storyQ3].map((q, i) => (
+                <p key={i} style={{ color: '#5C3D1E', fontStyle: 'italic', fontSize: '0.95rem', paddingInlineStart: '1rem', borderInlineStart: '3px solid #C9A84C' }}>{q}</p>
+              ))}
+            </div>
+            <p style={{ marginTop: '1.5rem', fontSize: '1.05rem', fontWeight: 700, color: '#3D2310' }}>{T.storyText}</p>
+            <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#7A5C3A', lineHeight: 1.8 }}>
+              <strong style={{ color: '#3D2310' }}>{T.storyMeaning} </strong>{T.storyMeaningText}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── PRICING ──────────────────────────────────────── */}
+      <section id="pricing" style={{ padding: 'clamp(3rem,6vw,5rem) 1.5rem', background: '#2A1A0A' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+          <p style={{ ...sectionTagStyle, color: 'rgba(201,168,76,0.7)' }}>💰 {T.pricingTitle}</p>
+          <h2 style={{ ...sectionTitleStyle, color: '#C9A84C', textAlign: 'center' }}>{T.pricingSub}</h2>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: '1rem', marginTop: '2.5rem' }}>
+            {PRICING.map(item => (
+              <div key={item.labelKey} style={{
+                background: item.featured ? 'linear-gradient(135deg,#C9A84C,#E8C96A)' : 'rgba(255,255,255,0.06)',
+                borderRadius: '1.5rem', padding: '1.5rem 1rem', textAlign: 'center',
+                border: item.featured ? 'none' : '1px solid rgba(201,168,76,0.18)',
+                position: 'relative',
+              }}>
+                {item.featured && (
+                  <span style={{ position: 'absolute', top: '-0.7rem', left: '50%', transform: 'translateX(-50%)', background: '#3D2310', color: '#C9A84C', fontSize: '0.65rem', fontWeight: 700, padding: '0.2rem 0.75rem', borderRadius: '1rem', whiteSpace: 'nowrap' }}>
+                    {T.popular}
+                  </span>
+                )}
+                <p style={{ fontSize: '0.9rem', fontWeight: 700, color: item.featured ? '#3D2310' : '#C9A84C', marginBottom: '0.5rem' }}>{T[item.labelKey]}</p>
+                {item.gift > 0 && <p style={{ fontSize: '0.72rem', color: item.featured ? '#5C3D1E' : 'rgba(201,168,76,0.7)', marginBottom: '0.5rem' }}>{T.gift.replace('{n}', String(item.gift))}</p>}
+                <p style={{ fontSize: '2rem', fontWeight: 900, color: item.featured ? '#3D2310' : '#fff' }}>{item.price}</p>
+                <p style={{ fontSize: '0.7rem', color: item.featured ? '#5C3D1E' : 'rgba(255,255,255,0.5)' }}>EGP</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── REVIEWS ──────────────────────────────────────── */}
+      <section style={{ padding: 'clamp(3rem,6vw,5rem) 1.5rem', background: '#FAF5EB' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <p style={sectionTagStyle}>⭐ {T.reviewsTitle}</p>
+          <h2 style={{ ...sectionTitleStyle, textAlign: 'center' }}>{T.reviewsSub}</h2>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: '1.5rem', marginTop: '2.5rem' }}>
+            {REVIEWS.map((r, i) => (
+              <div key={i} style={{ background: '#fff', borderRadius: '1.5rem', padding: '1.5rem', boxShadow: '0 4px 16px rgba(61,35,16,0.07)', border: '1px solid rgba(201,168,76,0.12)' }}>
+                <div style={{ color: '#C9A84C', fontSize: '0.9rem', marginBottom: '0.75rem' }}>★★★★★</div>
+                <p style={{ fontSize: '0.9rem', color: '#5C3D1E', lineHeight: 1.7, marginBottom: '1rem' }}>"{r.text}"</p>
+                <div style={{ borderTop: '1px solid rgba(201,168,76,0.15)', paddingTop: '0.75rem' }}>
+                  <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#3D2310' }}>{r.author}</p>
+                  <p style={{ fontSize: '0.72rem', color: '#7A5C3A' }}>{r.source}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ──────────────────────────────────────────── */}
+      <section id="order" style={{ padding: 'clamp(3rem,6vw,5rem) 1.5rem', background: 'linear-gradient(135deg,#3D2310,#5C3D1E)', textAlign: 'center' }}>
+        <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(2rem,5vw,3rem)', color: '#C9A84C', marginBottom: '1rem' }}>{T.ctaTitle}</h2>
+        <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1rem', marginBottom: '2rem' }}>{T.ctaSub}</p>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link href="/order" style={{ ...btnPrimaryStyle, background: '#C9A84C', color: '#3D2310' }}>{T.ctaBtn}</Link>
+          <a href="https://wa.me/201110330052" target="_blank" rel="noopener noreferrer" style={{ ...btnSecondaryStyle, borderColor: 'rgba(201,168,76,0.4)', color: '#C9A84C' }}>
+            💬 {T.ctaWa}
+          </a>
+        </div>
+      </section>
+
+      {/* ── FOOTER ───────────────────────────────────────── */}
+      <footer style={{ background: '#1A0E05', color: 'rgba(255,255,255,0.6)', padding: '3rem 1.5rem 2rem' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '2rem', marginBottom: '2rem' }}>
+          <div>
+            <Image src="/logo.jpg" alt="جُمار" width={120} height={60} style={{ height: 56, width: 'auto', objectFit: 'contain', filter: 'brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(5deg)', marginBottom: '0.5rem' }} />
+
+            <p style={{ fontSize: '0.8rem', lineHeight: 1.7 }}>{T.footerTagline}</p>
+          </div>
+          <div>
+            <p style={{ fontWeight: 700, color: '#fff', marginBottom: '0.75rem', fontSize: '0.85rem' }}>{T.nav.menu}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {(['#story', '#menu', '#pricing', '/order'] as const).map((href, i) => (
+                <a key={i} href={href} style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none', fontSize: '0.82rem' }}>{T.footerLinks[i]}</a>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p style={{ fontWeight: 700, color: '#fff', marginBottom: '0.75rem', fontSize: '0.85rem' }}>{T.footerContact}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.82rem' }}>
+              <span>📱 01110330052</span>
+              <span>✉️ jumarfromheartofthepalm2026@gmail.com</span>
+              <span>💳 InstaPay: 01110330052</span>
+              <span>📍 {T.footerLocation}</span>
+              <span style={{ color: '#C9A84C' }}>{T.footerDelivery}</span>
+              <span style={{ color: '#C9A84C' }}>{T.footerBazaar}</span>
+            </div>
+          </div>
+        </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1.5rem', textAlign: 'center', fontSize: '0.75rem' }}>
+          {T.copyright}
+        </div>
+      </footer>
+
+      {/* Fonts */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Cairo:wght@300;400;600;700;900&display=swap');
+        .nav-mobile-btn { display: none !important; }
+        @media (max-width: 640px) {
+          .nav-desktop { display: none !important; }
+          .nav-mobile-btn { display: inline-block !important; }
+        }
+      `}</style>
     </div>
   )
+}
+
+// ── Shared styles ────────────────────────────────────────────
+const navLinkStyle: React.CSSProperties = {
+  color: '#7A5C3A', textDecoration: 'none',
+  fontSize: '0.88rem', fontWeight: 600,
+}
+const sectionTagStyle: React.CSSProperties = {
+  fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.2em',
+  textTransform: 'uppercase', color: '#C9A84C', marginBottom: '0.75rem', textAlign: 'center',
+}
+const sectionTitleStyle: React.CSSProperties = {
+  fontFamily: "'Playfair Display', Georgia, serif",
+  fontSize: 'clamp(1.8rem,4vw,2.8rem)', fontWeight: 700,
+  color: '#3D2310', lineHeight: 1.2, textAlign: 'center',
+}
+const btnPrimaryStyle: React.CSSProperties = {
+  background: '#3D2310', color: '#C9A84C',
+  padding: '0.85rem 2rem', borderRadius: '3rem',
+  textDecoration: 'none', fontSize: '0.95rem', fontWeight: 700,
+  display: 'inline-block',
+}
+const btnSecondaryStyle: React.CSSProperties = {
+  background: 'transparent', color: '#3D2310',
+  padding: '0.85rem 2rem', borderRadius: '3rem',
+  textDecoration: 'none', fontSize: '0.95rem', fontWeight: 700,
+  border: '2px solid rgba(61,35,16,0.25)', display: 'inline-block',
 }
