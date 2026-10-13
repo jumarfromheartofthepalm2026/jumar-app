@@ -49,6 +49,7 @@ export default function BazaarPage() {
   const [daySummaries, setDaySummaries] = useState<DaySummary[]>([])
   const [lastSale, setLastSale] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [lastSaleId, setLastSaleId] = useState<number | null>(null)
 
   useEffect(() => {
     const auth = sessionStorage.getItem('jumar_admin')
@@ -123,7 +124,7 @@ export default function BazaarPage() {
   async function recordSale(item: typeof BAZAAR_ITEMS[0]) {
     setLoading(true)
     const desc = item.gift > 0 ? `${item.label} +${item.gift} هدية` : item.label
-    await supabase.from('sales').insert({
+    const { data } = await supabase.from('sales').insert({
       sale_date: today,
       channel: 'بازار',
       items_desc: desc,
@@ -131,11 +132,12 @@ export default function BazaarPage() {
       amount: item.price,
       customer_type: 'غريب',
       notes: `qty:${item.qty}|gift:${item.gift}|بازار لوتس أكتوبر 2026`,
-    })
+    }).select('id').single()
+    if (data?.id) setLastSaleId(data.id)
     setLastSale(`${item.label} — ${item.price}ج ✅`)
     await loadSummary()
     setLoading(false)
-    setTimeout(() => setLastSale(null), 2000)
+    setTimeout(() => { setLastSale(null); setLastSaleId(null) }, 8000)
   }
 
   const dayLabel = (date: string) => ({
@@ -200,10 +202,23 @@ export default function BazaarPage() {
           </div>
         </div>
 
-        {/* Last sale feedback */}
+        {/* Last sale feedback + undo */}
         {lastSale && (
-          <div className="bg-green-100 text-green-700 rounded-xl p-3 text-center font-bold text-sm">
-            {lastSale}
+          <div className="bg-green-100 text-green-700 rounded-xl p-3 flex items-center justify-between gap-2">
+            <span className="font-bold text-sm">{lastSale}</span>
+            {lastSaleId && (
+              <button
+                onClick={async () => {
+                  await supabase.from('sales').delete().eq('id', lastSaleId)
+                  setLastSale(null)
+                  setLastSaleId(null)
+                  await loadSummary()
+                }}
+                className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-lg hover:bg-red-600 active:scale-95 transition-all whitespace-nowrap"
+              >
+                ↩ تراجع
+              </button>
+            )}
           </div>
         )}
 
