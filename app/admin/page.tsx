@@ -416,8 +416,8 @@ function InventoryTab() {
   async function updateBoxQty(size: number, delta: number) {
     const cur = readyBoxes[size] || 0
     const newQty = Math.max(0, cur + delta)
-    await supabase.from('ready_boxes').upsert({ box_size: size, qty: newQty }, { onConflict: 'box_size' })
-    fetchBoxes()
+    await supabase.from('ready_boxes').update({ qty: newQty }).eq('box_size', size)
+    setReadyBoxes(prev => ({ ...prev, [size]: newQty }))
   }
 
   // حاسبة الإنتاج — احسب الخامات المطلوبة
