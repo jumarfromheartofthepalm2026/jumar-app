@@ -433,38 +433,64 @@ export default function HomePage() {
       {/* ── HERO ────────────────────────────────────────── */}
       <section style={{
         position: 'relative', minHeight: '92vh',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        textAlign: 'center', padding: '4rem 1.5rem', overflow: 'hidden',
-        background: 'radial-gradient(ellipse 70% 60% at 50% 120%, rgba(201,168,76,0.18) 0%, transparent 70%), radial-gradient(ellipse 40% 30% at 80% 20%, rgba(237,224,200,0.6) 0%, transparent 60%), #FAF5EB',
+        display: 'flex', alignItems: 'center',
+        overflow: 'hidden',
+        background: '#FAF5EB',
       }}>
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: 780 }}>
-          <span style={{
-            display: 'inline-block', fontSize: '0.7rem', fontWeight: 700,
-            letterSpacing: '0.25em', textTransform: 'uppercase', color: '#C9A84C',
-            border: '1.5px solid rgba(201,168,76,0.4)', padding: '0.35rem 1rem',
-            borderRadius: '2rem', marginBottom: '2rem',
-          }}>{T.heroTag}</span>
+        {/* Hero image — right side on desktop, full bg on mobile */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+          <Image
+            src="/products/hero-box.jpg"
+            alt="جُمار — علبة منتجات"
+            fill
+            style={{ objectFit: 'cover', objectPosition: isRtl ? 'left center' : 'right center', opacity: 0.18 }}
+            priority
+          />
+          <div style={{ position: 'absolute', inset: 0, background: isRtl
+            ? 'linear-gradient(to left, rgba(250,245,235,0.0) 0%, rgba(250,245,235,0.85) 45%, rgba(250,245,235,1) 70%)'
+            : 'linear-gradient(to right, rgba(250,245,235,0.0) 0%, rgba(250,245,235,0.85) 45%, rgba(250,245,235,1) 70%)'
+          }} />
+        </div>
 
-          {/* Emblem */}
-          <div style={{
-            width: 200, height: 200,
-            margin: '0 auto 2.5rem',
-            filter: 'drop-shadow(0 20px 50px rgba(61,35,16,0.25))',
-          }}>
-            <Image src="/logo.jpg" alt="جُمار" width={200} height={200} style={{ width: '100%', height: '100%', objectFit: 'contain' }} priority />
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', width: '100%', maxWidth: 1200, margin: '0 auto', padding: '4rem 1.5rem', gap: '3rem', flexWrap: 'wrap' }}>
+          {/* Text side */}
+          <div style={{ flex: '1 1 340px', textAlign: isRtl ? 'right' : 'left' }}>
+            <span style={{
+              display: 'inline-block', fontSize: '0.7rem', fontWeight: 700,
+              letterSpacing: '0.25em', textTransform: 'uppercase', color: '#C9A84C',
+              border: '1.5px solid rgba(201,168,76,0.4)', padding: '0.35rem 1rem',
+              borderRadius: '2rem', marginBottom: '1.5rem',
+            }}>{T.heroTag}</span>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <Image src="/logo.jpg" alt="جُمار" width={120} height={60} style={{ height: 52, width: 'auto', objectFit: 'contain' }} priority />
+            </div>
+
+            <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(2.8rem,7vw,5rem)', fontWeight: 700, color: '#3D2310', lineHeight: 1.1, marginBottom: '1.25rem' }}>
+              {T.heroTitle[0]}
+            </h1>
+
+            <p style={{ fontSize: 'clamp(0.95rem,2vw,1.1rem)', color: '#7A5C3A', lineHeight: 1.9, marginBottom: '2rem', whiteSpace: 'pre-line' }}>
+              {T.heroSub}
+            </p>
+
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: isRtl ? 'flex-start' : 'flex-start' }}>
+              <Link href="/order" style={btnPrimaryStyle}>{T.orderNow}</Link>
+              <a href="#menu" style={btnSecondaryStyle}>{T.viewMenu}</a>
+            </div>
           </div>
 
-          <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(2.8rem,8vw,5.5rem)', fontWeight: 700, color: '#3D2310', lineHeight: 1.1, marginBottom: '1.5rem' }}>
-            {T.heroTitle[0]}
-          </h1>
-
-          <p style={{ fontSize: 'clamp(1rem,2.5vw,1.2rem)', color: '#7A5C3A', lineHeight: 1.8, marginBottom: '2.5rem', whiteSpace: 'pre-line' }}>
-            {T.heroSub}
-          </p>
-
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/order" style={btnPrimaryStyle}>{T.orderNow}</Link>
-            <a href="#menu" style={btnSecondaryStyle}>{T.viewMenu}</a>
+          {/* Product image — visible on desktop */}
+          <div style={{ flex: '1 1 320px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <div style={{ position: 'relative', width: 'min(420px, 90vw)', aspectRatio: '1/1', borderRadius: '2rem', overflow: 'hidden', boxShadow: '0 32px 80px rgba(61,35,16,0.22)', border: '3px solid rgba(201,168,76,0.25)' }}>
+              <Image
+                src="/products/hero-box.jpg"
+                alt="علبة جُمار"
+                fill
+                style={{ objectFit: 'cover' }}
+                priority
+              />
+            </div>
           </div>
         </div>
       </section>
