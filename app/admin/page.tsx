@@ -850,20 +850,18 @@ function FinanceTab() {
             </div>
 
             {/* قيمة المخزون */}
-            <div className="bg-jumar-brown text-white rounded-2xl p-4">
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div>
-                  <p className="text-white/60 mb-1" style={{fontSize:'10px'}}>قيمة المخزون</p>
-                  <p className="text-lg font-bold text-jumar-gold leading-tight">{fmt(inventoryValue)}<span className="text-xs"> ج</span></p>
-                </div>
-                <div>
-                  <p className="text-white/60 mb-1" style={{fontSize:'10px'}}>قطع مباعة</p>
-                  <p className="text-lg font-bold leading-tight">{totalQtySold}</p>
-                </div>
-                <div>
-                  <p className="text-white/60 mb-1" style={{fontSize:'10px'}}>أيام تشغيل</p>
-                  <p className="text-lg font-bold leading-tight">{Object.keys(Object.fromEntries(sales.map(s => [s.sale_date, 1]))).length}</p>
-                </div>
+            <div className="bg-jumar-brown text-white rounded-2xl p-4 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-white/60">قيمة المخزون</span>
+                <span className="font-bold text-jumar-gold">{fmt(inventoryValue)} ج</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-white/60">قطع مباعة</span>
+                <span className="font-bold">{totalQtySold} قطعة</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-white/60">أيام تشغيل</span>
+                <span className="font-bold">{Object.keys(Object.fromEntries(sales.map(s => [s.sale_date, 1]))).length} يوم</span>
               </div>
             </div>
 
