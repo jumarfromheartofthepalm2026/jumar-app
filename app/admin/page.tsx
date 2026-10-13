@@ -42,7 +42,7 @@ const BOX_SIZES = [
   { label: 'علبة ٥', pieces: 5 },
   { label: 'علبة ٨', pieces: 8 },
   { label: 'علبة ١٥', pieces: 15 },
-  { label: 'علبة ٢٢', pieces: 22 },
+  { label: 'علبة ٢٤', pieces: 24 },
 ]
 
 const DEFAULT_INGREDIENTS = [
