@@ -904,31 +904,47 @@ function FinanceTab() {
 
         {/* ── P&L Statement ── */}
         {tab === 'pl' && (
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div className="p-4 bg-jumar-brown text-white">
-              <h2 className="font-bold text-lg">📋 قائمة الأرباح والخسائر</h2>
-              <p className="text-xs text-white/60">إجمالي منذ البداية</p>
-            </div>
-            <div className="divide-y divide-gray-100">
-              {[
-                { label: 'إجمالي الإيرادات (Top-Line)', value: totalRevenue, color: 'text-green-600', bold: true, indent: false },
-                { label: '(-) تكلفة البضاعة المباعة (COGS)', value: -totalCOGS, color: 'text-red-500', bold: false, indent: true },
-                { label: '= إجمالي الربح (Gross Profit)', value: grossProfit, color: grossProfit >= 0 ? 'text-green-600' : 'text-red-500', bold: true, indent: false },
-                { label: `   هامش الربح الإجمالي: ${fmtPct(grossMargin)}`, value: null, color: 'text-jumar-gold', bold: false, indent: true },
-                { label: '(-) مصاريف التشغيل (OPEX)', value: -totalOpex, color: 'text-red-500', bold: false, indent: true },
-                { label: `(-) تكلفة الهدايا والهدر (${totalGiftQty} قطعة)`, value: -giftCost, color: 'text-orange-500', bold: false, indent: true },
-                { label: '= صافي الربح التشغيلي', value: netProfit, color: netProfit >= 0 ? 'text-green-600' : 'text-red-500', bold: true, indent: false },
-                { label: `   هامش الربح الصافي: ${fmtPct(netMargin)}`, value: null, color: 'text-jumar-gold', bold: false, indent: true },
-              ].map((row, i) => (
-                <div key={i} className={`flex justify-between items-center p-4 ${row.bold ? 'bg-gray-50' : ''} ${row.indent ? 'pr-8' : ''}`}>
-                  <span className={`text-sm ${row.bold ? 'font-bold text-gray-800' : 'text-gray-600'}`}>{row.label}</span>
-                  {row.value !== null && (
-                    <span className={`font-bold text-sm ${row.color}`}>
-                      {row.value >= 0 ? '' : '−'}{fmt(Math.abs(row.value))} ج
-                    </span>
-                  )}
+          <div className="space-y-3">
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <div className="px-4 py-3 bg-jumar-brown text-white">
+                <h2 className="font-bold">📋 قائمة الأرباح والخسائر</h2>
+                <p className="text-xs text-white/60 mt-0.5">إجمالي منذ البداية</p>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {/* إيرادات */}
+                <div className="flex justify-between items-center px-4 py-3">
+                  <span className="font-bold text-gray-800 text-sm">إجمالي الإيرادات</span>
+                  <span className="font-bold text-green-600">{fmt(totalRevenue)} ج</span>
                 </div>
-              ))}
+                <div className="flex justify-between items-center px-4 py-2 bg-gray-50">
+                  <span className="text-gray-500 text-sm pr-4">(-) تكلفة البضاعة (COGS)</span>
+                  <span className="font-semibold text-red-500 text-sm">−{fmt(totalCOGS)} ج</span>
+                </div>
+                {/* gross profit */}
+                <div className="px-4 py-3">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-gray-800 text-sm">= إجمالي الربح</span>
+                    <span className={`font-bold ${grossProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmt(grossProfit)} ج</span>
+                  </div>
+                  <p className="text-xs text-jumar-gold mt-0.5">هامش إجمالي: {fmtPct(grossMargin)}</p>
+                </div>
+                <div className="flex justify-between items-center px-4 py-2 bg-gray-50">
+                  <span className="text-gray-500 text-sm pr-4">(-) مصاريف التشغيل (OPEX)</span>
+                  <span className="font-semibold text-red-500 text-sm">−{fmt(totalOpex)} ج</span>
+                </div>
+                <div className="flex justify-between items-center px-4 py-2 bg-gray-50">
+                  <span className="text-gray-500 text-sm pr-4">(-) تكلفة الهدايا ({totalGiftQty} قطعة)</span>
+                  <span className="font-semibold text-orange-500 text-sm">−{fmt(giftCost)} ج</span>
+                </div>
+                {/* net profit */}
+                <div className={`px-4 py-3 ${netProfit >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-gray-800">= صافي الربح</span>
+                    <span className={`font-bold text-lg ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{netProfit >= 0 ? '' : '−'}{fmt(Math.abs(netProfit))} ج</span>
+                  </div>
+                  <p className="text-xs text-jumar-gold mt-0.5">هامش صافي: {fmtPct(netMargin)}</p>
+                </div>
+              </div>
             </div>
           </div>
         )}
