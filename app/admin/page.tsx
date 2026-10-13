@@ -824,29 +824,24 @@ function FinanceTab() {
         ))}
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="p-4 pt-5 space-y-4">
 
         {/* ── نظرة سريعة ── */}
         {tab === 'overview' && (
           <>
             {/* KPI tiles */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
-                <p className="text-xs text-gray-400 mb-2">إجمالي الإيرادات</p>
-                <p className="text-xl font-bold text-green-600">{fmt(totalRevenue)} ج</p>
-              </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
-                <p className="text-xs text-gray-400 mb-2">صافي الربح</p>
-                <p className={`text-xl font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{netProfit >= 0 ? '+' : ''}{fmt(netProfit)} ج</p>
-              </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
-                <p className="text-xs text-gray-400 mb-2">هامش إجمالي</p>
-                <p className="text-xl font-bold text-jumar-gold">{fmtPct(grossMargin)}</p>
-              </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
-                <p className="text-xs text-gray-400 mb-2">هامش صافي</p>
-                <p className={`text-xl font-bold ${netMargin >= 0 ? 'text-jumar-brown' : 'text-red-500'}`}>{fmtPct(netMargin)}</p>
-              </div>
+              {[
+                { label: 'إجمالي الإيرادات', value: fmt(totalRevenue) + ' ج', color: 'text-green-600' },
+                { label: 'صافي الربح', value: (netProfit >= 0 ? '+' : '') + fmt(netProfit) + ' ج', color: netProfit >= 0 ? 'text-green-600' : 'text-red-500' },
+                { label: 'هامش إجمالي', value: fmtPct(grossMargin), color: 'text-jumar-gold' },
+                { label: 'هامش صافي', value: fmtPct(netMargin), color: netMargin >= 0 ? 'text-jumar-brown' : 'text-red-500' },
+              ].map((kpi, i) => (
+                <div key={i} className="bg-white rounded-2xl shadow-sm text-center py-4 px-3 flex flex-col justify-center gap-2">
+                  <p className="text-xs text-gray-400 leading-tight">{kpi.label}</p>
+                  <p className={`text-lg font-bold leading-tight ${kpi.color}`}>{kpi.value}</p>
+                </div>
+              ))}
             </div>
 
             {/* قيمة المخزون */}
