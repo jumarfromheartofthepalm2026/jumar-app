@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useSearchParams } from 'next/navigation'
 
 const PACKAGES = [
   { label: 'قطعة واحدة', qty: 1, gift: 0, price: 40 },
@@ -22,63 +23,103 @@ const FLAVORS = [
   { key: 'snickers_bunduq', label: 'سنيكرز البندق' },
 ]
 
-type Step = 'package' | 'details' | 'confirm' | 'done'
+type CartItem = { key: string; nameAr: string; qty: number; price: number }
+type Step = 'package' | 'cart' | 'details' | 'confirm' | 'done'
 
 export default function OrderPage() {
-  const [step, setStep] = useState<Step>('package')
+  const searchParams = useSearchParams()
+  const fromCart = searchParams.get('cart') === '1'
+
+  const [step, setStep] = useState<Step>(fromCart ? 'cart' : 'package')
   const [selectedPkg, setSelectedPkg] = useState<typeof PACKAGES[0] | null>(null)
   const [flavors, setFlavors] = useState<Record<string, number>>({})
+  const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [form, setForm] = useState({ name: '', phone: '', address: '', notes: '' })
   const [loading, setLoading] = useState(false)
   const [orderNum, setOrderNum] = useState('')
 
+  useEffect(() => {
+    if (fromCart) {
+      try {
+        const saved = JSON.parse(localStorage.getItem('jumar_cart') || '[]') as CartItem[]
+        setCartItems(saved)
+      } catch {}
+    }
+  }, [fromCart])
+
   const totalFlavors = Object.values(flavors).reduce((a, b) => a + b, 0)
   const remainingFlavors = (selectedPkg?.qty || 0) - totalFlavors
+
+  const cartTotal = cartItems.reduce((s, i) => s + i.qty * i.price, 0)
+  const cartCount = cartItems.reduce((s, i) => s + i.qty, 0)
+  const freeDelivery = cartTotal >= 1500
 
   function setFlavor(key: string, val: number) {
     setFlavors(prev => ({ ...prev, [key]: Math.max(0, val) }))
   }
 
-  async function submitOrder() {
-    if (!selectedPkg) return
-    setLoading(true)
-    const flavorDesc = Object.entries(flavors)
-      .filter(([, q]) => q > 0)
-      .map(([k, q]) => `${FLAVORS.find(f => f.key === k)?.label} x${q}`)
-      .join(' · ')
-
-    const num = `JM-${Date.now().toString().slice(-6)}`
-    await supabase.from('sales').insert({
-      sale_date: new Date().toISOString().split('T')[0],
-      channel: 'أونلاين',
-      items_desc: `${selectedPkg.label}${selectedPkg.gift > 0 ? ` +${selectedPkg.gift} هدية` : ''} — ${flavorDesc}`,
-      total_qty: selectedPkg.qty + selectedPkg.gift,
-      amount: selectedPkg.price,
-      customer_type: 'غريب',
-      customer_name: form.name,
-      customer_phone: form.phone,
-      customer_address: form.address,
-      notes: `order:${num}|${flavorDesc}|${form.notes}`,
+  function adjustCartItem(key: string, delta: number) {
+    setCartItems(prev => {
+      const next = prev.map(i => i.key === key ? { ...i, qty: i.qty + delta } : i).filter(i => i.qty > 0)
+      try { localStorage.setItem('jumar_cart', JSON.stringify(next)) } catch {}
+      return next
     })
+  }
+
+  async function submitOrder() {
+    setLoading(true)
+    const num = `JM-${Date.now().toString().slice(-6)}`
+
+    if (fromCart && cartItems.length > 0) {
+      // Cart order
+      const itemsDesc = cartItems.map(i => `${i.nameAr} x${i.qty}`).join(' · ')
+      await supabase.from('sales').insert({
+        sale_date: new Date().toISOString().split('T')[0],
+        channel: 'أونلاين',
+        items_desc: itemsDesc,
+        total_qty: cartCount,
+        amount: cartTotal,
+        customer_type: 'غريب',
+        customer_name: form.name,
+        customer_phone: form.phone,
+        customer_address: form.address,
+        notes: `order:${num}|cart|${form.notes}`,
+      })
+      try { localStorage.removeItem('jumar_cart') } catch {}
+      const msg = encodeURIComponent(
+        `🛒 طلب جديد ${num}\n👤 ${form.name}\n📱 ${form.phone}\n📍 ${form.address}\n` +
+        cartItems.map(i => `🍬 ${i.nameAr} x${i.qty} — ${i.qty * i.price}ج`).join('\n') +
+        `\n💰 الإجمالي: ${cartTotal}ج` +
+        (freeDelivery ? '\n🚚 توصيل مجاني' : '') +
+        (form.notes ? `\n📝 ${form.notes}` : '')
+      )
+      window.open(`https://wa.me/201110330052?text=${msg}`, '_blank')
+    } else if (selectedPkg) {
+      // Package order
+      const flavorDesc = Object.entries(flavors).filter(([,q]) => q > 0).map(([k, q]) => `${FLAVORS.find(f => f.key === k)?.label} x${q}`).join(' · ')
+      await supabase.from('sales').insert({
+        sale_date: new Date().toISOString().split('T')[0],
+        channel: 'أونلاين',
+        items_desc: `${selectedPkg.label}${selectedPkg.gift > 0 ? ` +${selectedPkg.gift} هدية` : ''} — ${flavorDesc}`,
+        total_qty: selectedPkg.qty + selectedPkg.gift,
+        amount: selectedPkg.price,
+        customer_type: 'غريب',
+        customer_name: form.name,
+        customer_phone: form.phone,
+        customer_address: form.address,
+        notes: `order:${num}|${flavorDesc}|${form.notes}`,
+      })
+      const flavorLine = Object.entries(flavors).filter(([,q]) => q > 0).map(([k, q]) => `${FLAVORS.find(f => f.key === k)?.label} x${q}`).join(' | ')
+      const msg = encodeURIComponent(
+        `🛒 طلب جديد ${num}\n👤 ${form.name}\n📱 ${form.phone}\n📍 ${form.address}\n📦 ${selectedPkg.label} — ${selectedPkg.price}ج\n🍬 ${flavorLine}` +
+        (form.notes ? `\n📝 ${form.notes}` : '')
+      )
+      window.open(`https://wa.me/201110330052?text=${msg}`, '_blank')
+    }
+
     setOrderNum(num)
     setStep('done')
     setLoading(false)
-
-    // إشعار واتساب تلقائي للأدمن
-    const flavorLine = Object.entries(flavors)
-      .filter(([,q]) => q > 0)
-      .map(([k, q]) => `${FLAVORS.find(f => f.key === k)?.label} x${q}`)
-      .join(' | ')
-    const msg = encodeURIComponent(
-      `🛒 طلب جديد ${num}\n` +
-      `👤 ${form.name}\n` +
-      `📱 ${form.phone}\n` +
-      `📍 ${form.address}\n` +
-      `📦 ${selectedPkg.label} — ${selectedPkg.price}ج\n` +
-      `🍬 ${flavorLine}` +
-      (form.notes ? `\n📝 ${form.notes}` : '')
-    )
-    window.open(`https://wa.me/201110330052?text=${msg}`, '_blank')
   }
 
   const brown = '#3D2310'
@@ -99,10 +140,56 @@ export default function OrderPage() {
 
         {/* Progress */}
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem' }}>
-          {(['package', 'details', 'confirm'] as Step[]).map((s, i) => (
-            <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: ['package','details','confirm','done'].indexOf(step) >= i ? gold : 'rgba(201,168,76,0.2)' }} />
-          ))}
+          {(fromCart ? ['cart','details','confirm'] : ['package','details','confirm']).map((s, i) => {
+            const steps = fromCart ? ['cart','details','confirm','done'] : ['package','details','confirm','done']
+            return <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: steps.indexOf(step) >= i ? gold : 'rgba(201,168,76,0.2)' }} />
+          })}
         </div>
+
+        {/* ── CART REVIEW ── */}
+        {step === 'cart' && (
+          <div>
+            <h1 style={{ color: brown, fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.4rem' }}>سلة التسوق</h1>
+            <p style={{ color: '#7A5C3A', fontSize: '0.85rem', marginBottom: '1.5rem' }}>راجع طلبك قبل الإكمال</p>
+            {cartItems.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '3rem 0' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🛒</div>
+                <p style={{ color: '#7A5C3A' }}>السلة فاضية</p>
+                <Link href="/" style={{ display: 'inline-block', marginTop: '1rem', color: gold, fontWeight: 700, textDecoration: 'none' }}>← رجوع للمنيو</Link>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
+                  {cartItems.map(item => (
+                    <div key={item.key} style={{ background: '#fff', borderRadius: '1rem', padding: '0.9rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(201,168,76,0.2)' }}>
+                      <div>
+                        <p style={{ fontWeight: 700, color: brown, fontSize: '0.9rem', margin: 0 }}>{item.nameAr}</p>
+                        <p style={{ color: gold, fontWeight: 700, fontSize: '0.85rem', margin: '0.15rem 0 0' }}>{item.price * item.qty} ج</p>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <button onClick={() => adjustCartItem(item.key, -1)} style={{ width: 28, height: 28, border: `1.5px solid ${gold}`, borderRadius: '50%', background: 'transparent', color: brown, fontWeight: 700, cursor: 'pointer', fontSize: '1rem' }}>−</button>
+                        <span style={{ fontWeight: 700, color: brown, minWidth: 20, textAlign: 'center' }}>{item.qty}</span>
+                        <button onClick={() => adjustCartItem(item.key, 1)} style={{ width: 28, height: 28, border: `1.5px solid ${gold}`, borderRadius: '50%', background: gold, color: brown, fontWeight: 700, cursor: 'pointer', fontSize: '1rem' }}>+</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ background: '#fff', borderRadius: '1rem', padding: '1rem', border: '1px solid rgba(201,168,76,0.2)', marginBottom: '1.25rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span style={{ color: brown, fontWeight: 700 }}>الإجمالي ({cartCount} قطعة)</span>
+                    <span style={{ color: gold, fontWeight: 900, fontSize: '1.1rem' }}>{cartTotal} ج</span>
+                  </div>
+                  <p style={{ fontSize: '0.78rem', padding: '0.4rem 0.6rem', borderRadius: '0.5rem', margin: 0, background: freeDelivery ? 'rgba(0,180,0,0.08)' : 'rgba(201,168,76,0.1)', color: freeDelivery ? '#2A7A2A' : '#7A5C3A' }}>
+                    {freeDelivery ? '✅ توصيل مجاني!' : `🚚 أضف ${1500 - cartTotal} ج للتوصيل المجاني`}
+                  </p>
+                </div>
+                <button onClick={() => setStep('details')} style={{ width: '100%', background: brown, color: gold, border: 'none', borderRadius: '2rem', padding: '0.9rem', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  إكمال الطلب ←
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {/* ── STEP 1: Choose package ── */}
         {step === 'package' && (
@@ -139,54 +226,53 @@ export default function OrderPage() {
           </div>
         )}
 
-        {/* ── STEP 2: Customer details + flavors ── */}
-        {step === 'details' && selectedPkg && (
+        {/* ── STEP 2: Details (+ flavors if package mode) ── */}
+        {step === 'details' && (
           <div>
             <h1 style={{ color: brown, fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem' }}>بياناتك</h1>
-            <p style={{ color: '#7A5C3A', fontSize: '0.85rem', marginBottom: '1.5rem' }}>وزّع {selectedPkg.qty} قطعة على النكهات اللي بتحبها</p>
-
-            {/* Flavors */}
-            <div style={{ background: '#fff', borderRadius: '1rem', padding: '1rem', marginBottom: '1rem', border: '1px solid rgba(201,168,76,0.2)' }}>
-              <p style={{ fontWeight: 700, color: brown, marginBottom: '0.75rem', fontSize: '0.9rem' }}>
-                النكهات — متبقي: <span style={{ color: remainingFlavors < 0 ? 'red' : gold }}>{remainingFlavors}</span> قطعة
-              </p>
-              {FLAVORS.map(f => (
-                <div key={f.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                  <span style={{ fontSize: '0.88rem', color: '#3D2310' }}>{f.label}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <button onClick={() => setFlavor(f.key, (flavors[f.key] || 0) - 1)} style={{ width: 28, height: 28, border: `1.5px solid ${gold}`, borderRadius: '50%', background: 'transparent', color: brown, fontWeight: 700, cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
-                    <span style={{ minWidth: 20, textAlign: 'center', fontWeight: 700, color: brown }}>{flavors[f.key] || 0}</span>
-                    <button onClick={() => remainingFlavors > 0 && setFlavor(f.key, (flavors[f.key] || 0) + 1)} style={{ width: 28, height: 28, border: `1.5px solid ${gold}`, borderRadius: '50%', background: remainingFlavors > 0 ? gold : '#ddd', color: remainingFlavors > 0 ? brown : '#999', fontWeight: 700, cursor: remainingFlavors > 0 ? 'pointer' : 'not-allowed', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+            {!fromCart && selectedPkg && (
+              <p style={{ color: '#7A5C3A', fontSize: '0.85rem', marginBottom: '1rem' }}>وزّع {selectedPkg.qty} قطعة على النكهات اللي بتحبها</p>
+            )}
+            {!fromCart && selectedPkg && (
+              <div style={{ background: '#fff', borderRadius: '1rem', padding: '1rem', marginBottom: '1rem', border: '1px solid rgba(201,168,76,0.2)' }}>
+                <p style={{ fontWeight: 700, color: brown, marginBottom: '0.75rem', fontSize: '0.9rem' }}>
+                  النكهات — متبقي: <span style={{ color: remainingFlavors < 0 ? 'red' : gold }}>{remainingFlavors}</span> قطعة
+                </p>
+                {FLAVORS.map(f => (
+                  <div key={f.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                    <span style={{ fontSize: '0.88rem', color: '#3D2310' }}>{f.label}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <button onClick={() => setFlavor(f.key, (flavors[f.key] || 0) - 1)} style={{ width: 28, height: 28, border: `1.5px solid ${gold}`, borderRadius: '50%', background: 'transparent', color: brown, fontWeight: 700, cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                      <span style={{ minWidth: 20, textAlign: 'center', fontWeight: 700, color: brown }}>{flavors[f.key] || 0}</span>
+                      <button onClick={() => remainingFlavors > 0 && setFlavor(f.key, (flavors[f.key] || 0) + 1)} style={{ width: 28, height: 28, border: `1.5px solid ${gold}`, borderRadius: '50%', background: remainingFlavors > 0 ? gold : '#ddd', color: remainingFlavors > 0 ? brown : '#999', fontWeight: 700, cursor: remainingFlavors > 0 ? 'pointer' : 'not-allowed', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                    </div>
                   </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ marginTop: '0.5rem' }}>
+              {[
+                { key: 'name', label: 'الاسم', placeholder: 'اسمك الكامل', type: 'text' },
+                { key: 'phone', label: 'رقم التليفون', placeholder: '01xxxxxxxxx', type: 'tel' },
+                { key: 'address', label: 'العنوان', placeholder: 'الحي + الشارع + رقم المبنى', type: 'text' },
+                { key: 'notes', label: 'ملاحظات (اختياري)', placeholder: 'أي تفاصيل إضافية', type: 'text' },
+              ].map(({ key, label, placeholder, type }) => (
+                <div key={key} style={{ marginBottom: '0.75rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: brown, marginBottom: '0.3rem' }}>{label}</label>
+                  <input type={type} placeholder={placeholder} value={form[key as keyof typeof form]}
+                    onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
+                    style={{ width: '100%', border: '1.5px solid rgba(201,168,76,0.35)', borderRadius: '0.75rem', padding: '0.65rem 0.9rem', fontSize: '0.9rem', fontFamily: 'inherit', background: '#fff', color: brown, boxSizing: 'border-box', outline: 'none' }} />
                 </div>
               ))}
             </div>
 
-            {/* Form */}
-            {[
-              { key: 'name', label: 'الاسم', placeholder: 'اسمك الكامل', type: 'text' },
-              { key: 'phone', label: 'رقم التليفون', placeholder: '01xxxxxxxxx', type: 'tel' },
-              { key: 'address', label: 'العنوان', placeholder: 'الحي + الشارع + رقم المبنى', type: 'text' },
-              { key: 'notes', label: 'ملاحظات (اختياري)', placeholder: 'أي تفاصيل إضافية', type: 'text' },
-            ].map(({ key, label, placeholder, type }) => (
-              <div key={key} style={{ marginBottom: '0.75rem' }}>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: brown, marginBottom: '0.3rem' }}>{label}</label>
-                <input
-                  type={type}
-                  placeholder={placeholder}
-                  value={form[key as keyof typeof form]}
-                  onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
-                  style={{ width: '100%', border: '1.5px solid rgba(201,168,76,0.35)', borderRadius: '0.75rem', padding: '0.65rem 0.9rem', fontSize: '0.9rem', fontFamily: 'inherit', background: '#fff', color: brown, boxSizing: 'border-box', outline: 'none' }}
-                />
-              </div>
-            ))}
-
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-              <button onClick={() => setStep('package')} style={{ flex: 1, background: 'transparent', border: `1.5px solid ${gold}`, color: brown, borderRadius: '2rem', padding: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>← رجوع</button>
+              <button onClick={() => setStep(fromCart ? 'cart' : 'package')} style={{ flex: 1, background: 'transparent', border: `1.5px solid ${gold}`, color: brown, borderRadius: '2rem', padding: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>← رجوع</button>
               <button
                 onClick={() => setStep('confirm')}
-                disabled={remainingFlavors !== 0 || !form.name || !form.phone || !form.address}
-                style={{ flex: 2, background: remainingFlavors === 0 && form.name && form.phone && form.address ? brown : '#ccc', color: gold, border: 'none', borderRadius: '2rem', padding: '0.8rem', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                disabled={(!fromCart && remainingFlavors !== 0) || !form.name || !form.phone || !form.address}
+                style={{ flex: 2, background: (fromCart || remainingFlavors === 0) && form.name && form.phone && form.address ? brown : '#ccc', color: gold, border: 'none', borderRadius: '2rem', padding: '0.8rem', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', fontFamily: 'inherit' }}>
                 مراجعة الطلب ←
               </button>
             </div>
@@ -194,23 +280,26 @@ export default function OrderPage() {
         )}
 
         {/* ── STEP 3: Confirm ── */}
-        {step === 'confirm' && selectedPkg && (
+        {step === 'confirm' && (
           <div>
             <h1 style={{ color: brown, fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem' }}>تأكيد الطلب</h1>
 
             <div style={{ background: '#fff', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(201,168,76,0.2)', marginBottom: '1rem' }}>
-              <p style={{ fontWeight: 700, color: brown, marginBottom: '0.75rem' }}>📦 الباكج</p>
-              <p style={{ color: '#555', fontSize: '0.9rem' }}>{selectedPkg.label}{selectedPkg.gift > 0 ? ` + ${selectedPkg.gift} هدية` : ''}</p>
-              <p style={{ color: gold, fontWeight: 800, fontSize: '1.3rem', marginTop: '0.25rem' }}>{selectedPkg.price} جنيه</p>
-            </div>
-
-            <div style={{ background: '#fff', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(201,168,76,0.2)', marginBottom: '1rem' }}>
-              <p style={{ fontWeight: 700, color: brown, marginBottom: '0.75rem' }}>🍬 النكهات</p>
-              {Object.entries(flavors).filter(([,q]) => q > 0).map(([k, q]) => (
-                <p key={k} style={{ color: '#555', fontSize: '0.88rem', margin: '0.2rem 0' }}>
-                  {FLAVORS.find(f => f.key === k)?.label} × {q}
-                </p>
-              ))}
+              <p style={{ fontWeight: 700, color: brown, marginBottom: '0.75rem' }}>🍬 المنتجات</p>
+              {fromCart ? cartItems.map(i => (
+                <p key={i.key} style={{ color: '#555', fontSize: '0.88rem', margin: '0.2rem 0' }}>{i.nameAr} × {i.qty} — {i.qty * i.price}ج</p>
+              )) : selectedPkg && (
+                <>
+                  <p style={{ color: '#555', fontSize: '0.9rem' }}>{selectedPkg.label}{selectedPkg.gift > 0 ? ` + ${selectedPkg.gift} هدية` : ''}</p>
+                  {Object.entries(flavors).filter(([,q]) => q > 0).map(([k, q]) => (
+                    <p key={k} style={{ color: '#555', fontSize: '0.88rem', margin: '0.2rem 0' }}>{FLAVORS.find(f => f.key === k)?.label} × {q}</p>
+                  ))}
+                </>
+              )}
+              <p style={{ color: gold, fontWeight: 800, fontSize: '1.2rem', marginTop: '0.75rem' }}>
+                {fromCart ? cartTotal : selectedPkg?.price} جنيه
+                {fromCart && freeDelivery && <span style={{ fontSize: '0.78rem', color: '#2A7A2A', marginRight: '0.5rem' }}>· توصيل مجاني ✅</span>}
+              </p>
             </div>
 
             <div style={{ background: '#fff', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(201,168,76,0.2)', marginBottom: '1.5rem' }}>
@@ -219,6 +308,7 @@ export default function OrderPage() {
               <p style={{ color: '#555', fontSize: '0.88rem', margin: '0.2rem 0' }}>📱 {form.phone}</p>
               <p style={{ color: '#555', fontSize: '0.88rem', margin: '0.2rem 0' }}>📍 {form.address}</p>
               {form.notes && <p style={{ color: '#555', fontSize: '0.88rem', margin: '0.2rem 0' }}>📝 {form.notes}</p>}
+              <p style={{ color: '#7A5C3A', fontSize: '0.78rem', marginTop: '0.5rem' }}>⏱️ التوصيل خلال ٤ أيام من التأكيد</p>
             </div>
 
             <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -238,7 +328,7 @@ export default function OrderPage() {
             <h1 style={{ color: brown, fontSize: '1.6rem', fontWeight: 700, marginBottom: '0.5rem' }}>طلبك اتسجّل!</h1>
             <p style={{ color: '#7A5C3A', fontSize: '0.9rem', marginBottom: '0.5rem' }}>رقم الطلب: <strong style={{ color: gold }}>{orderNum}</strong></p>
             <p style={{ color: '#7A5C3A', fontSize: '0.88rem', lineHeight: 1.7, marginBottom: '2rem' }}>
-              هنتواصل معاك على {form.phone} لتأكيد الطلب والموعد
+              هنتواصل معاك على {form.phone} لتأكيد الطلب والموعد · التوصيل خلال ٤ أيام
             </p>
             <a href={`https://wa.me/201110330052?text=طلبي رقم ${orderNum} — ${form.name}`}
               target="_blank" rel="noopener noreferrer"
