@@ -1163,22 +1163,58 @@ function FinanceTab() {
         {/* ── ROI البازار ── */}
         {tab === 'bazaar_roi' && (
           <div className="space-y-3">
-            <div className="bg-jumar-brown text-white rounded-2xl p-5 text-center">
-              <p className="text-sm text-white/70 mb-2">ROI البازار</p>
-              <p className={`text-4xl font-bold ${bazaarROI !== null && bazaarROI >= 0 ? 'text-jumar-gold' : 'text-red-300'}`}>
+            {/* بطاقة ROI الرئيسية */}
+            <div className={`rounded-2xl p-5 text-center ${bazaarROI !== null && bazaarROI < 0 ? 'bg-red-600' : 'bg-jumar-brown'}`}>
+              <p className="text-sm text-white/70 mb-1">العائد على الاستثمار</p>
+              <p className="text-5xl font-bold text-white mb-2">
                 {bazaarROI !== null ? `${bazaarROI.toFixed(0)}%` : '—'}
               </p>
-              {bazaarROI !== null && <p className="text-xs text-white/50 mt-1">{bazaarROI >= 100 ? '✅ مربح جداً' : bazaarROI >= 0 ? '⚠️ مربح بالكاد' : '❌ خسارة'}</p>}
+              <span className={`text-sm font-bold px-3 py-1 rounded-full ${
+                bazaarROI === null ? 'bg-white/20 text-white/70' :
+                bazaarROI >= 100 ? 'bg-green-400/30 text-green-100' :
+                bazaarROI >= 0 ? 'bg-amber-400/30 text-amber-100' :
+                'bg-white/20 text-white'
+              }`}>
+                {bazaarROI === null ? 'لا توجد بيانات' : bazaarROI >= 100 ? '✅ مربح جداً' : bazaarROI >= 0 ? '⚠️ مربح بالكاد' : '❌ خسارة'}
+              </span>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white rounded-2xl p-4 shadow-sm text-center"><p className="text-xs text-gray-400 mb-1">إيراد البازار</p><p className="text-2xl font-bold text-green-600">{fmt(bazaarRevenue)} ج</p></div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm text-center"><p className="text-xs text-gray-400 mb-1">تكلفة البازار</p><p className="text-2xl font-bold text-red-500">{fmt(bazaarCost)} ج</p></div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm text-center"><p className="text-xs text-gray-400 mb-1">صافي ربح البازار</p><p className={`text-2xl font-bold ${bazaarProfit >= 0 ? 'text-jumar-brown' : 'text-red-500'}`}>{bazaarProfit >= 0 ? '+' : ''}{fmt(bazaarProfit)} ج</p></div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm text-center"><p className="text-xs text-gray-400 mb-1">% من إجمالي الإيرادات</p><p className="text-2xl font-bold text-jumar-gold">{totalRevenue > 0 ? fmtPct(bazaarRevenue / totalRevenue * 100) : '—'}</p></div>
+
+            {/* تفاصيل */}
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              {[
+                { label: 'إيراد البازار', value: fmt(bazaarRevenue) + ' ج', color: 'text-green-600' },
+                { label: 'تكلفة المشاركة', value: '−' + fmt(bazaarCost) + ' ج', color: 'text-red-500' },
+                { label: 'تكلفة البضاعة (COGS)', value: '−' + fmt(bazaarRevenue > 0 ? bazaarRevenue * (totalCOGS / (totalRevenue || 1)) : 0) + ' ج', color: 'text-orange-500' },
+              ].map((row, i) => (
+                <div key={i} className="flex justify-between items-center px-4 py-3 border-b border-gray-100 last:border-0">
+                  <span className="text-sm text-gray-600">{row.label}</span>
+                  <span className={`font-bold ${row.color}`}>{row.value}</span>
+                </div>
+              ))}
+              <div className="flex justify-between items-center px-4 py-3 bg-gray-50">
+                <span className="font-bold text-gray-800">صافي ربح البازار</span>
+                <span className={`font-bold text-lg ${bazaarProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                  {bazaarProfit >= 0 ? '+' : '−'}{fmt(Math.abs(bazaarProfit))} ج
+                </span>
+              </div>
             </div>
+
+            {/* نسبة من الإجمالي */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <p className="text-xs text-gray-400 mb-1">البازار من إجمالي الإيرادات</p>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 bg-gray-100 rounded-full h-2">
+                  <div className="h-2 rounded-full bg-jumar-gold" style={{ width: `${totalRevenue > 0 ? Math.min(100, bazaarRevenue / totalRevenue * 100) : 0}%` }} />
+                </div>
+                <span className="font-bold text-jumar-brown text-sm w-12 text-left">
+                  {totalRevenue > 0 ? fmtPct(bazaarRevenue / totalRevenue * 100) : '—'}
+                </span>
+              </div>
+            </div>
+
             {bazaarCost === 0 && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
-                💡 سجّل تكاليف البازار (رسوم الاشتراك) في المصروفات تحت فئة "رسوم بازار" عشان يتحسب الـ ROI صح
+                💡 سجّل رسوم البازار في المصروفات تحت فئة <strong>"رسوم بازار"</strong> عشان يتحسب الـ ROI صح
               </div>
             )}
           </div>
