@@ -1459,7 +1459,7 @@ function AnalyticsTab() {
         supabase.from('orders').select('id, status, created_at, order_items(product_name, quantity)').order('created_at', { ascending: false }),
       ])
       setSales(s || [])
-      setOrders(o || [])
+      setOrders((o || []) as unknown as Order[])
       setLoading(false)
     }
     load()
