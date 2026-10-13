@@ -832,29 +832,38 @@ function FinanceTab() {
             {/* KPI tiles */}
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
-                <p className="text-xs text-gray-500 mb-1">إجمالي الإيرادات</p>
-                <p className="text-2xl font-bold text-green-600">{fmt(totalRevenue)} ج</p>
+                <p className="text-xs text-gray-400 mb-2">إجمالي الإيرادات</p>
+                <p className="text-xl font-bold text-green-600">{fmt(totalRevenue)} ج</p>
               </div>
               <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
-                <p className="text-xs text-gray-500 mb-1">صافي الربح</p>
-                <p className={`text-2xl font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{netProfit >= 0 ? '+' : ''}{fmt(netProfit)} ج</p>
+                <p className="text-xs text-gray-400 mb-2">صافي الربح</p>
+                <p className={`text-xl font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{netProfit >= 0 ? '+' : ''}{fmt(netProfit)} ج</p>
               </div>
               <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
-                <p className="text-xs text-gray-500 mb-1">هامش الربح الإجمالي</p>
-                <p className="text-2xl font-bold text-jumar-gold">{fmtPct(grossMargin)}</p>
+                <p className="text-xs text-gray-400 mb-2">هامش إجمالي</p>
+                <p className="text-xl font-bold text-jumar-gold">{fmtPct(grossMargin)}</p>
               </div>
               <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
-                <p className="text-xs text-gray-500 mb-1">هامش الربح الصافي</p>
-                <p className={`text-2xl font-bold ${netMargin >= 0 ? 'text-jumar-brown' : 'text-red-500'}`}>{fmtPct(netMargin)}</p>
+                <p className="text-xs text-gray-400 mb-2">هامش صافي</p>
+                <p className={`text-xl font-bold ${netMargin >= 0 ? 'text-jumar-brown' : 'text-red-500'}`}>{fmtPct(netMargin)}</p>
               </div>
             </div>
 
             {/* قيمة المخزون */}
             <div className="bg-jumar-brown text-white rounded-2xl p-4">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div><p className="text-xs text-white/60 mb-1">قيمة المخزون</p><p className="text-xl font-bold text-jumar-gold">{fmt(inventoryValue)} ج</p></div>
-                <div><p className="text-xs text-white/60 mb-1">قطع مباعة</p><p className="text-xl font-bold">{totalQtySold}</p></div>
-                <div><p className="text-xs text-white/60 mb-1">أيام بيانات</p><p className="text-xl font-bold">{Object.keys(Object.fromEntries(sales.map(s => [s.sale_date, 1]))).length}</p></div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <p className="text-white/60 mb-1" style={{fontSize:'10px'}}>قيمة المخزون</p>
+                  <p className="text-lg font-bold text-jumar-gold leading-tight">{fmt(inventoryValue)}<span className="text-xs"> ج</span></p>
+                </div>
+                <div>
+                  <p className="text-white/60 mb-1" style={{fontSize:'10px'}}>قطع مباعة</p>
+                  <p className="text-lg font-bold leading-tight">{totalQtySold}</p>
+                </div>
+                <div>
+                  <p className="text-white/60 mb-1" style={{fontSize:'10px'}}>أيام تشغيل</p>
+                  <p className="text-lg font-bold leading-tight">{Object.keys(Object.fromEntries(sales.map(s => [s.sale_date, 1]))).length}</p>
+                </div>
               </div>
             </div>
 
