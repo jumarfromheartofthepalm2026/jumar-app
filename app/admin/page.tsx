@@ -815,7 +815,7 @@ function FinanceTab() {
   return (
     <div className="max-w-2xl mx-auto">
       {/* Tab bar — horizontal scroll */}
-      <div className="flex gap-1 overflow-x-auto pb-0 bg-white border-b border-gray-200 sticky top-[52px] z-10 px-2 pt-2">
+      <div className="flex gap-1 overflow-x-auto pb-0 bg-white border-b border-gray-200 px-2 pt-2">
         {TABS.map(([key, label]) => (
           <button key={key} onClick={() => setTab(key as any)}
             className={`px-3 py-2 text-xs font-semibold whitespace-nowrap rounded-t-lg transition-all flex-shrink-0 ${tab === key ? 'bg-jumar-brown text-white' : 'text-gray-500 hover:text-jumar-brown'}`}>
@@ -837,9 +837,9 @@ function FinanceTab() {
                 { label: 'هامش إجمالي', value: fmtPct(grossMargin), color: 'text-jumar-gold' },
                 { label: 'هامش صافي', value: fmtPct(netMargin), color: netMargin >= 0 ? 'text-jumar-brown' : 'text-red-500' },
               ].map((kpi, i) => (
-                <div key={i} className="bg-white rounded-2xl shadow-sm text-center py-4 px-3 flex flex-col justify-center gap-2">
-                  <p className="text-xs text-gray-400 leading-tight">{kpi.label}</p>
-                  <p className={`text-lg font-bold leading-tight ${kpi.color}`}>{kpi.value}</p>
+                <div key={i} className="bg-white rounded-2xl shadow-sm text-center p-4 flex flex-col gap-2 min-h-[90px] justify-center">
+                  <p className="text-xs text-gray-500 leading-snug">{kpi.label}</p>
+                  <p className={`text-xl font-bold leading-tight ${kpi.color}`}>{kpi.value}</p>
                 </div>
               ))}
             </div>
@@ -1099,9 +1099,9 @@ function FinanceTab() {
                     <div className="bg-jumar-gold h-2 rounded-full" style={{ width: `${pct}%` }} />
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-lg font-bold text-gray-700">{fmtPct(pct)}</p><p className="text-xs text-gray-400">من الإيرادات</p></div>
-                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-lg font-bold text-gray-700">{fmt(avg)} ج</p><p className="text-xs text-gray-400">متوسط البيعة</p></div>
-                    <div className={`rounded-lg p-2 ${estMargin >= 0 ? 'bg-green-50' : 'bg-red-50'}`}><p className={`text-lg font-bold ${estMargin >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmtPct(estMargin)}</p><p className="text-xs text-gray-400">هامش تقديري</p></div>
+                    <div className="bg-gray-50 rounded-lg p-3 flex flex-col gap-1"><p className="text-xs text-gray-400 leading-snug">من الإيرادات</p><p className="text-base font-bold text-gray-700">{fmtPct(pct)}</p></div>
+                    <div className="bg-gray-50 rounded-lg p-3 flex flex-col gap-1"><p className="text-xs text-gray-400 leading-snug">متوسط البيعة</p><p className="text-base font-bold text-gray-700">{fmt(avg)} ج</p></div>
+                    <div className={`rounded-lg p-3 flex flex-col gap-1 ${estMargin >= 0 ? 'bg-green-50' : 'bg-red-50'}`}><p className="text-xs text-gray-400 leading-snug">هامش تقديري</p><p className={`text-base font-bold ${estMargin >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmtPct(estMargin)}</p></div>
                   </div>
                 </div>
               )
@@ -1113,9 +1113,9 @@ function FinanceTab() {
         {tab === 'customers' && (
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-2">
-              <div className="bg-white rounded-2xl p-3 shadow-sm text-center"><p className="text-xl font-bold text-jumar-brown">{Object.keys(customerOrders).length}</p><p className="text-xs text-gray-400">إجمالي عملاء</p></div>
-              <div className="bg-white rounded-2xl p-3 shadow-sm text-center"><p className="text-xl font-bold text-green-600">{repeatCustomers.length}</p><p className="text-xs text-gray-400">عملاء مكررون</p></div>
-              <div className="bg-white rounded-2xl p-3 shadow-sm text-center"><p className="text-xl font-bold text-jumar-gold">{fmt(avgOrderValue)} ج</p><p className="text-xs text-gray-400">متوسط الطلب</p></div>
+              <div className="bg-white rounded-2xl p-3 shadow-sm text-center flex flex-col gap-1"><p className="text-xs text-gray-400 leading-snug">إجمالي عملاء</p><p className="text-xl font-bold text-jumar-brown">{Object.keys(customerOrders).length}</p></div>
+              <div className="bg-white rounded-2xl p-3 shadow-sm text-center flex flex-col gap-1"><p className="text-xs text-gray-400 leading-snug">مكررون</p><p className="text-xl font-bold text-green-600">{repeatCustomers.length}</p></div>
+              <div className="bg-white rounded-2xl p-3 shadow-sm text-center flex flex-col gap-1"><p className="text-xs text-gray-400 leading-snug">متوسط الطلب</p><p className="text-xl font-bold text-jumar-gold">{fmt(avgOrderValue)} ج</p></div>
             </div>
 
             {/* نسبة التكرار */}
@@ -1235,12 +1235,12 @@ function FinanceTab() {
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <p className="font-bold text-jumar-brown mb-3">📊 تحليل المصروفات</p>
               <div className="grid grid-cols-2 gap-3 mb-3">
-                <div className="bg-red-50 rounded-xl p-3 text-center">
-                  <p className="text-xs text-red-600 mb-1">مصاريف ثابتة</p>
+                <div className="bg-red-50 rounded-xl p-4 text-center min-h-[80px] flex flex-col justify-center gap-1">
+                  <p className="text-xs text-red-600 leading-snug">مصاريف ثابتة</p>
                   <p className="text-xl font-bold text-red-600">{fmt(fixedExpenses)} ج</p>
                 </div>
-                <div className="bg-orange-50 rounded-xl p-3 text-center">
-                  <p className="text-xs text-orange-600 mb-1">مصاريف متغيرة</p>
+                <div className="bg-orange-50 rounded-xl p-4 text-center min-h-[80px] flex flex-col justify-center gap-1">
+                  <p className="text-xs text-orange-600 leading-snug">مصاريف متغيرة</p>
                   <p className="text-xl font-bold text-orange-600">{fmt(totalOpex - fixedExpenses)} ج</p>
                 </div>
               </div>
