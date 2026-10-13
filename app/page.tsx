@@ -67,6 +67,17 @@ const t = {
     addToCart: 'أضف للسلة',
     cancelModal: 'إلغاء',
     piecesCount: '{n} قطعة',
+    cartHeader: '🛒 سلة التسوق',
+    cartEmpty: 'السلة فاضية',
+    cartEmptySub: 'اختار علبة من المنيو',
+    cartPieces: 'قطعة',
+    cartClear: '🗑 إفراغ السلة',
+    cartTotal: 'الإجمالي',
+    cartBox: 'علبة',
+    cartAddFor: (n: number) => `🚚 أضف ${n} ج للتوصيل المجاني`,
+    cartFreeDelivery: '✅ توصيل مجاني!',
+    cartCheckout: 'إتمام الطلب ←',
+    currency: 'ج',
     dir: 'rtl',
   },
   en: {
@@ -129,6 +140,17 @@ const t = {
     addToCart: 'Add to Cart',
     cancelModal: 'Cancel',
     piecesCount: '{n} pieces',
+    cartHeader: '🛒 Shopping Cart',
+    cartEmpty: 'Your cart is empty',
+    cartEmptySub: 'Choose a box from the menu',
+    cartPieces: 'pieces',
+    cartClear: '🗑 Clear cart',
+    cartTotal: 'Total',
+    cartBox: 'box(es)',
+    cartAddFor: (n: number) => `🚚 Add ${n} EGP for free delivery`,
+    cartFreeDelivery: '✅ Free delivery!',
+    cartCheckout: 'Checkout →',
+    currency: 'EGP',
     dir: 'ltr',
   },
   fr: {
@@ -191,6 +213,17 @@ const t = {
     addToCart: 'Ajouter au panier',
     cancelModal: 'Annuler',
     piecesCount: '{n} pièces',
+    cartHeader: '🛒 Panier',
+    cartEmpty: 'Votre panier est vide',
+    cartEmptySub: 'Choisissez une boîte dans le menu',
+    cartPieces: 'pièces',
+    cartClear: '🗑 Vider le panier',
+    cartTotal: 'Total',
+    cartBox: 'boîte(s)',
+    cartAddFor: (n: number) => `🚚 Ajoutez ${n} EGP pour la livraison gratuite`,
+    cartFreeDelivery: '✅ Livraison gratuite !',
+    cartCheckout: 'Commander →',
+    currency: 'EGP',
     dir: 'ltr',
   },
 }
@@ -298,7 +331,13 @@ export default function HomePage() {
   const T = t[lang]
   const isRtl = lang === 'ar'
 
-  useEffect(() => { setCart(getCart()) }, [])
+  useEffect(() => {
+    setCart(getCart())
+    try {
+      const saved = localStorage.getItem('jumar_lang') as Lang | null
+      if (saved && ['ar','en','fr'].includes(saved)) setLang(saved)
+    } catch {}
+  }, [])
 
   // Modal helpers
   const modalTotal = Object.values(modalFlavors).reduce((s, n) => s + n, 0)
@@ -428,7 +467,7 @@ export default function HomePage() {
         {/* Language switcher + cart */}
         <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
           {(['ar', 'en', 'fr'] as Lang[]).map(l => (
-            <button key={l} onClick={() => setLang(l)} style={{
+            <button key={l} onClick={() => { setLang(l); try { localStorage.setItem('jumar_lang', l) } catch {} }} style={{
               padding: '0.2rem 0.55rem', borderRadius: '1rem', border: '1.5px solid',
               borderColor: lang === l ? '#C9A84C' : 'rgba(201,168,76,0.3)',
               background: lang === l ? '#3D2310' : 'transparent',
@@ -595,10 +634,10 @@ export default function HomePage() {
             background: '#FAF5EB', zIndex: 301,
             display: 'flex', flexDirection: 'column',
             boxShadow: '-4px 0 24px rgba(0,0,0,0.18)',
-          }} dir="rtl">
+          }} dir={T.dir}>
             {/* Drawer header */}
             <div style={{ background: '#3D2310', padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#C9A84C', fontWeight: 700, fontSize: '1rem' }}>🛒 سلة التسوق</span>
+              <span style={{ color: '#C9A84C', fontWeight: 700, fontSize: '1rem' }}>{T.cartHeader}</span>
               <button onClick={() => setCartOpen(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
             </div>
 
@@ -607,45 +646,51 @@ export default function HomePage() {
               {cart.length === 0 ? (
                 <div style={{ textAlign: 'center', paddingTop: '3rem', color: '#7A5C3A' }}>
                   <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🛒</div>
-                  <p style={{ fontWeight: 700 }}>السلة فاضية</p>
-                  <p style={{ fontSize: '0.85rem', marginTop: '0.4rem' }}>اختار علبة من المنيو</p>
+                  <p style={{ fontWeight: 700 }}>{T.cartEmpty}</p>
+                  <p style={{ fontSize: '0.85rem', marginTop: '0.4rem' }}>{T.cartEmptySub}</p>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {cart.map(item => (
-                    <div key={item.key} style={{
-                      background: '#fff', borderRadius: '1.25rem', padding: '1rem',
-                      border: '1px solid rgba(201,168,76,0.2)',
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.6rem' }}>
-                        <div>
-                          <p style={{ fontWeight: 700, color: '#3D2310', fontSize: '0.9rem', margin: 0 }}>{item.nameAr}</p>
-                          <p style={{ color: '#7A5C3A', fontSize: '0.72rem', margin: '0.15rem 0 0' }}>{item.piecesPerBox} قطعة</p>
+                  {cart.map(item => {
+                    const itemName = lang === 'ar' ? item.nameAr
+                      : lang === 'en' ? (item.boxLabelKey === 'box8' ? 'Box of 8' : item.boxLabelKey === 'box15' ? 'Box of 15' : 'Box of 24')
+                      : (item.boxLabelKey === 'box8' ? 'Boîte de 8' : item.boxLabelKey === 'box15' ? 'Boîte de 15' : 'Boîte de 24')
+                    return (
+                      <div key={item.key} style={{
+                        background: '#fff', borderRadius: '1.25rem', padding: '1rem',
+                        border: '1px solid rgba(201,168,76,0.2)',
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.6rem' }}>
+                          <div>
+                            <p style={{ fontWeight: 700, color: '#3D2310', fontSize: '0.9rem', margin: 0 }}>{itemName}</p>
+                            <p style={{ color: '#7A5C3A', fontSize: '0.72rem', margin: '0.15rem 0 0' }}>{item.piecesPerBox} {T.cartPieces}</p>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontWeight: 900, color: '#C9A84C', fontSize: '0.95rem' }}>{item.price} {T.currency}</span>
+                            <button onClick={() => removeCartItem(item.key)} style={{ background: 'rgba(200,0,0,0.07)', border: 'none', color: '#c00', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗑</button>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 900, color: '#C9A84C', fontSize: '0.95rem' }}>{item.price} ج</span>
-                          <button onClick={() => removeCartItem(item.key)} style={{ background: 'rgba(200,0,0,0.07)', border: 'none', color: '#c00', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗑</button>
+                        {/* Flavor breakdown */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                          {Object.entries(item.flavors).filter(([, n]) => n > 0).map(([k, n]) => {
+                            const f = FLAVORS.find(f => f.key === k)
+                            const fname = f ? (lang === 'ar' ? f.nameAr : lang === 'en' ? f.nameEn : f.nameFr) : k
+                            return (
+                              <span key={k} style={{
+                                background: 'rgba(201,168,76,0.12)', color: '#5C3D1E',
+                                fontSize: '0.68rem', fontWeight: 600,
+                                padding: '0.2rem 0.5rem', borderRadius: '1rem',
+                                border: '1px solid rgba(201,168,76,0.2)',
+                              }}>
+                                {f?.emoji} {fname} ×{n}
+                              </span>
+                            )
+                          })}
                         </div>
                       </div>
-                      {/* Flavor breakdown */}
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                        {Object.entries(item.flavors).filter(([, n]) => n > 0).map(([k, n]) => {
-                          const f = FLAVORS.find(f => f.key === k)
-                          return (
-                            <span key={k} style={{
-                              background: 'rgba(201,168,76,0.12)', color: '#5C3D1E',
-                              fontSize: '0.68rem', fontWeight: 600,
-                              padding: '0.2rem 0.5rem', borderRadius: '1rem',
-                              border: '1px solid rgba(201,168,76,0.2)',
-                            }}>
-                              {f?.emoji} {f?.nameAr} ×{n}
-                            </span>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                  <button onClick={clearCart} style={{ background: 'none', border: 'none', color: '#999', fontSize: '0.78rem', cursor: 'pointer', textAlign: 'right', padding: '0.25rem 0' }}>🗑 إفراغ السلة</button>
+                    )
+                  })}
+                  <button onClick={clearCart} style={{ background: 'none', border: 'none', color: '#999', fontSize: '0.78rem', cursor: 'pointer', textAlign: isRtl ? 'right' : 'left', padding: '0.25rem 0' }}>{T.cartClear}</button>
                 </div>
               )}
             </div>
@@ -654,21 +699,21 @@ export default function HomePage() {
             {cart.length > 0 && (
               <div style={{ padding: '1rem', borderTop: '1px solid rgba(201,168,76,0.2)', background: '#fff' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <span style={{ fontWeight: 700, color: '#3D2310' }}>الإجمالي ({cartCount} علبة)</span>
-                  <span style={{ fontWeight: 900, color: '#C9A84C', fontSize: '1.1rem' }}>{cartTotal} ج</span>
+                  <span style={{ fontWeight: 700, color: '#3D2310' }}>{T.cartTotal} ({cartCount} {T.cartBox})</span>
+                  <span style={{ fontWeight: 900, color: '#C9A84C', fontSize: '1.1rem' }}>{cartTotal} {T.currency}</span>
                 </div>
                 {cartTotal < 1500 && (
                   <p style={{ fontSize: '0.75rem', color: '#7A5C3A', marginBottom: '0.75rem', background: 'rgba(201,168,76,0.1)', padding: '0.4rem 0.6rem', borderRadius: '0.5rem' }}>
-                    🚚 أضف {1500 - cartTotal} ج للوصول للتوصيل المجاني
+                    {T.cartAddFor(1500 - cartTotal)}
                   </p>
                 )}
                 {cartTotal >= 1500 && (
                   <p style={{ fontSize: '0.75rem', color: '#2A7A2A', marginBottom: '0.75rem', background: 'rgba(0,180,0,0.08)', padding: '0.4rem 0.6rem', borderRadius: '0.5rem' }}>
-                    ✅ تهانينا! طلبك يستحق توصيل مجاني
+                    {T.cartFreeDelivery}
                   </p>
                 )}
                 <button onClick={goCheckout} style={{ width: '100%', background: '#3D2310', color: '#C9A84C', border: 'none', borderRadius: '2rem', padding: '0.85rem', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  إتمام الطلب ←
+                  {T.cartCheckout}
                 </button>
               </div>
             )}
