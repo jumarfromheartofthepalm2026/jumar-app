@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
@@ -23,7 +25,15 @@ const FLAVORS = [
   { key: 'snickers_bunduq', label: 'سنيكرز البندق' },
 ]
 
-type CartItem = { key: string; nameAr: string; qty: number; price: number }
+type CartItem = {
+  key: string
+  boxLabelKey: string
+  nameAr: string
+  qty: number
+  price: number
+  piecesPerBox: number
+  flavors: Record<string, number>
+}
 type Step = 'package' | 'cart' | 'details' | 'confirm' | 'done'
 
 function OrderPageInner() {
@@ -51,16 +61,16 @@ function OrderPageInner() {
   const remainingFlavors = (selectedPkg?.qty || 0) - totalFlavors
 
   const cartTotal = cartItems.reduce((s, i) => s + i.qty * i.price, 0)
-  const cartCount = cartItems.reduce((s, i) => s + i.qty, 0)
+  const cartCount = cartItems.length  // count of boxes
   const freeDelivery = cartTotal >= 1500
 
   function setFlavor(key: string, val: number) {
     setFlavors(prev => ({ ...prev, [key]: Math.max(0, val) }))
   }
 
-  function adjustCartItem(key: string, delta: number) {
+  function removeCartItem(key: string) {
     setCartItems(prev => {
-      const next = prev.map(i => i.key === key ? { ...i, qty: i.qty + delta } : i).filter(i => i.qty > 0)
+      const next = prev.filter(i => i.key !== key)
       try { localStorage.setItem('jumar_cart', JSON.stringify(next)) } catch {}
       return next
     })
@@ -72,12 +82,15 @@ function OrderPageInner() {
 
     if (fromCart && cartItems.length > 0) {
       // Cart order
-      const itemsDesc = cartItems.map(i => `${i.nameAr} x${i.qty}`).join(' · ')
+      const itemsDesc = cartItems.map(i => {
+        const flavorLine = Object.entries(i.flavors).filter(([,n]) => n > 0).map(([k,n]) => `${FLAVORS.find(f=>f.key===k)?.label}×${n}`).join('+')
+        return `${i.nameAr}(${flavorLine})`
+      }).join(' · ')
       await supabase.from('sales').insert({
         sale_date: new Date().toISOString().split('T')[0],
         channel: 'أونلاين',
         items_desc: itemsDesc,
-        total_qty: cartCount,
+        total_qty: cartItems.reduce((s,i) => s + i.piecesPerBox, 0),
         amount: cartTotal,
         customer_type: 'غريب',
         customer_name: form.name,
@@ -86,9 +99,13 @@ function OrderPageInner() {
         notes: `order:${num}|cart|${form.notes}`,
       })
       try { localStorage.removeItem('jumar_cart') } catch {}
+      const boxLines = cartItems.map(i => {
+        const flavorLine = Object.entries(i.flavors).filter(([,n]) => n > 0).map(([k,n]) => `${FLAVORS.find(f=>f.key===k)?.label} ×${n}`).join(' | ')
+        return `📦 ${i.nameAr} — ${i.price}ج\n   🍬 ${flavorLine}`
+      }).join('\n')
       const msg = encodeURIComponent(
         `🛒 طلب جديد ${num}\n👤 ${form.name}\n📱 ${form.phone}\n📍 ${form.address}\n` +
-        cartItems.map(i => `🍬 ${i.nameAr} x${i.qty} — ${i.qty * i.price}ج`).join('\n') +
+        boxLines +
         `\n💰 الإجمالي: ${cartTotal}ج` +
         (freeDelivery ? '\n🚚 توصيل مجاني' : '') +
         (form.notes ? `\n📝 ${form.notes}` : '')
@@ -161,22 +178,33 @@ function OrderPageInner() {
               <>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
                   {cartItems.map(item => (
-                    <div key={item.key} style={{ background: '#fff', borderRadius: '1rem', padding: '0.9rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(201,168,76,0.2)' }}>
-                      <div>
-                        <p style={{ fontWeight: 700, color: brown, fontSize: '0.9rem', margin: 0 }}>{item.nameAr}</p>
-                        <p style={{ color: gold, fontWeight: 700, fontSize: '0.85rem', margin: '0.15rem 0 0' }}>{item.price * item.qty} ج</p>
+                    <div key={item.key} style={{ background: '#fff', borderRadius: '1rem', padding: '1rem', border: '1px solid rgba(201,168,76,0.2)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.6rem' }}>
+                        <div>
+                          <p style={{ fontWeight: 700, color: brown, fontSize: '0.9rem', margin: 0 }}>{item.nameAr}</p>
+                          <p style={{ color: '#7A5C3A', fontSize: '0.72rem', margin: '0.1rem 0 0' }}>{item.piecesPerBox} قطعة</p>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ color: gold, fontWeight: 900, fontSize: '0.95rem' }}>{item.price} ج</span>
+                          <button onClick={() => removeCartItem(item.key)} style={{ background: 'rgba(200,0,0,0.07)', border: 'none', color: '#c00', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗑</button>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <button onClick={() => adjustCartItem(item.key, -1)} style={{ width: 28, height: 28, border: `1.5px solid ${gold}`, borderRadius: '50%', background: 'transparent', color: brown, fontWeight: 700, cursor: 'pointer', fontSize: '1rem' }}>−</button>
-                        <span style={{ fontWeight: 700, color: brown, minWidth: 20, textAlign: 'center' }}>{item.qty}</span>
-                        <button onClick={() => adjustCartItem(item.key, 1)} style={{ width: 28, height: 28, border: `1.5px solid ${gold}`, borderRadius: '50%', background: gold, color: brown, fontWeight: 700, cursor: 'pointer', fontSize: '1rem' }}>+</button>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                        {Object.entries(item.flavors).filter(([,n]) => n > 0).map(([k,n]) => {
+                          const f = FLAVORS.find(f => f.key === k)
+                          return (
+                            <span key={k} style={{ background: 'rgba(201,168,76,0.1)', color: '#5C3D1E', fontSize: '0.68rem', fontWeight: 600, padding: '0.15rem 0.45rem', borderRadius: '1rem', border: '1px solid rgba(201,168,76,0.2)' }}>
+                              {f?.label} ×{n}
+                            </span>
+                          )
+                        })}
                       </div>
                     </div>
                   ))}
                 </div>
                 <div style={{ background: '#fff', borderRadius: '1rem', padding: '1rem', border: '1px solid rgba(201,168,76,0.2)', marginBottom: '1.25rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span style={{ color: brown, fontWeight: 700 }}>الإجمالي ({cartCount} قطعة)</span>
+                    <span style={{ color: brown, fontWeight: 700 }}>الإجمالي ({cartCount} علبة)</span>
                     <span style={{ color: gold, fontWeight: 900, fontSize: '1.1rem' }}>{cartTotal} ج</span>
                   </div>
                   <p style={{ fontSize: '0.78rem', padding: '0.4rem 0.6rem', borderRadius: '0.5rem', margin: 0, background: freeDelivery ? 'rgba(0,180,0,0.08)' : 'rgba(201,168,76,0.1)', color: freeDelivery ? '#2A7A2A' : '#7A5C3A' }}>
@@ -287,7 +315,15 @@ function OrderPageInner() {
             <div style={{ background: '#fff', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(201,168,76,0.2)', marginBottom: '1rem' }}>
               <p style={{ fontWeight: 700, color: brown, marginBottom: '0.75rem' }}>🍬 المنتجات</p>
               {fromCart ? cartItems.map(i => (
-                <p key={i.key} style={{ color: '#555', fontSize: '0.88rem', margin: '0.2rem 0' }}>{i.nameAr} × {i.qty} — {i.qty * i.price}ج</p>
+                <div key={i.key} style={{ marginBottom: '0.75rem' }}>
+                  <p style={{ color: brown, fontSize: '0.88rem', fontWeight: 700, margin: 0 }}>{i.nameAr} — {i.price}ج</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.3rem' }}>
+                    {Object.entries(i.flavors).filter(([,n]) => n > 0).map(([k,n]) => {
+                      const f = FLAVORS.find(f => f.key === k)
+                      return <span key={k} style={{ background: 'rgba(201,168,76,0.1)', color: '#5C3D1E', fontSize: '0.68rem', fontWeight: 600, padding: '0.15rem 0.45rem', borderRadius: '1rem' }}>{f?.label} ×{n}</span>
+                    })}
+                  </div>
+                </div>
               )) : selectedPkg && (
                 <>
                   <p style={{ color: '#555', fontSize: '0.9rem' }}>{selectedPkg.label}{selectedPkg.gift > 0 ? ` + ${selectedPkg.gift} هدية` : ''}</p>
