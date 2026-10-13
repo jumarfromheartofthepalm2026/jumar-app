@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -26,7 +26,7 @@ const FLAVORS = [
 type CartItem = { key: string; nameAr: string; qty: number; price: number }
 type Step = 'package' | 'cart' | 'details' | 'confirm' | 'done'
 
-export default function OrderPage() {
+function OrderPageInner() {
   const searchParams = useSearchParams()
   const fromCart = searchParams.get('cart') === '1'
 
@@ -342,5 +342,13 @@ export default function OrderPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function OrderPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Cairo', sans-serif", color: '#3D2310' }}>جاري التحميل...</div>}>
+      <OrderPageInner />
+    </Suspense>
   )
 }
