@@ -21,7 +21,10 @@ const t = {
     badge4: 'توصيل سريع',
     deliveryBanner: '🚚 توصيل مجاني داخل التجمع الخامس حتى ٣١ أكتوبر',
     menuTitle: 'المنيو',
-    menuSub: 'خمس نكهات، كل واحدة قصة',
+    menuFlavorsTitle: 'اختار نكهاتك',
+    menuFlavorsSub: 'خمس نكهات — كل واحدة بتحكي قصة',
+    menuBoxesTitle: 'علب الأونلاين ستور',
+    menuBoxesSub: 'اختار العلبة المناسبة وخصّصها بالنكهات اللي بتحبها',
     price: '٤٠ جنيه / قطعة',
     seasonal: 'قريباً · نكهات موسمية',
     seasonalDesc: 'نكهات حصرية بمناسبة المواسم والأعياد — ترقّبونا!',
@@ -57,6 +60,13 @@ const t = {
     footerDelivery: '🚚 توصيل مجاني داخل التجمع حتى ٣١/١٠',
     footerBazaar: '🏪 بازار لوتس ٢٢-٢٤ أكتوبر ٢٠٢٦',
     copyright: '© ٢٠٢٦ جُمار · جميع الحقوق محفوظة',
+    chooseFlavors: 'اختار النكهات',
+    modalTitle: 'اختار نكهات العلبة',
+    modalRemaining: 'باقي {n} قطعة',
+    modalDone: 'تمام! وزّعت كل القطع',
+    addToCart: 'أضف للسلة',
+    cancelModal: 'إلغاء',
+    piecesCount: '{n} قطعة',
     dir: 'rtl',
   },
   en: {
@@ -73,7 +83,10 @@ const t = {
     badge4: 'Fast Delivery',
     deliveryBanner: '🚚 Free delivery inside Fifth Settlement until Oct 31',
     menuTitle: 'Menu',
-    menuSub: 'Five flavors, each a story',
+    menuFlavorsTitle: 'Choose Your Flavors',
+    menuFlavorsSub: 'Five flavors — each one tells a story',
+    menuBoxesTitle: 'Online Store Boxes',
+    menuBoxesSub: 'Pick your box and customize with your favorite flavors',
     price: '40 EGP / piece',
     seasonal: 'Coming Soon · Seasonal Flavors',
     seasonalDesc: 'Exclusive flavors for special occasions and holidays — stay tuned!',
@@ -109,6 +122,13 @@ const t = {
     footerDelivery: '🚚 Free delivery in Fifth Settlement until 31/10',
     footerBazaar: '🏪 Lotus Bazaar Oct 22–24, 2026',
     copyright: '© 2026 Jumar · All rights reserved',
+    chooseFlavors: 'Choose Flavors',
+    modalTitle: 'Choose Box Flavors',
+    modalRemaining: '{n} pieces left',
+    modalDone: 'All pieces distributed!',
+    addToCart: 'Add to Cart',
+    cancelModal: 'Cancel',
+    piecesCount: '{n} pieces',
     dir: 'ltr',
   },
   fr: {
@@ -125,7 +145,10 @@ const t = {
     badge4: 'Livraison rapide',
     deliveryBanner: '🚚 Livraison gratuite au Fifth Settlement jusqu\'au 31 octobre',
     menuTitle: 'Menu',
-    menuSub: 'Cinq saveurs, chacune une histoire',
+    menuFlavorsTitle: 'Choisissez vos saveurs',
+    menuFlavorsSub: 'Cinq saveurs — chacune raconte une histoire',
+    menuBoxesTitle: 'Boîtes boutique en ligne',
+    menuBoxesSub: 'Choisissez votre boîte et personnalisez avec vos saveurs préférées',
     price: '40 EGP / pièce',
     seasonal: 'Bientôt · Saveurs Saisonnières',
     seasonalDesc: 'Saveurs exclusives pour les occasions spéciales — restez à l\'écoute !',
@@ -161,6 +184,13 @@ const t = {
     footerDelivery: '🚚 Livraison gratuite au Fifth Settlement jusqu\'au 31/10',
     footerBazaar: '🏪 Bazar Lotus 22–24 octobre 2026',
     copyright: '© 2026 Jumar · Tous droits réservés',
+    chooseFlavors: 'Choisir les saveurs',
+    modalTitle: 'Choisissez les saveurs de la boîte',
+    modalRemaining: '{n} pièces restantes',
+    modalDone: 'Toutes les pièces distribuées !',
+    addToCart: 'Ajouter au panier',
+    cancelModal: 'Annuler',
+    piecesCount: '{n} pièces',
     dir: 'ltr',
   },
 }
@@ -168,11 +198,11 @@ const t = {
 type Lang = 'ar' | 'en' | 'fr'
 
 const PRODUCTS = [
-  { key: 'tamriya', nameAr: 'تمرية الطحينة', nameEn: 'Tahini Tamriya', nameFr: 'Tamriya Tahini', ingAr: 'تمر مجدول + طحينة ناعمة + سمسم محمّص', ingEn: 'Medjool dates + smooth tahini + toasted sesame', ingFr: 'Dattes Medjool + tahini + sésame grillé', img: '/products/chocolate.jpg' },
-  { key: 'fudge', nameAr: 'فدج الكاجو', nameEn: 'Cashew Fudge', nameFr: 'Fudge Cajou', ingAr: 'تمر مجدول + كاجو مطحون + زبدة طبيعية', ingEn: 'Medjool dates + ground cashew + natural butter', ingFr: 'Dattes Medjool + noix de cajou + beurre naturel', img: '/products/cashew.jpg' },
-  { key: 'sultana', nameAr: 'سلطانة الفستق', nameEn: 'Pistachio Sultana', nameFr: 'Sultane Pistache', ingAr: 'تمر مجدول + فستق حلبي مختار', ingEn: 'Medjool dates + selected pistachio', ingFr: 'Dattes Medjool + pistache sélectionnée', img: '/products/pistachio.jpg' },
-  { key: 'snickers_fool', nameAr: 'سنيكرز الفول السوداني', nameEn: 'Peanut Snickers', nameFr: 'Snickers Cacahuète', ingAr: 'تمر مجدول + فول سوداني محمّص + شوكولاتة دارك بلجيكية شوجر فري', ingEn: 'Medjool dates + roasted peanuts + Belgian dark chocolate sugar-free', ingFr: 'Dattes Medjool + cacahuètes grillées + chocolat belge noir sans sucre', img: '/products/box-pieces.jpg' },
-  { key: 'snickers_bunduq', nameAr: 'سنيكرز البندق', nameEn: 'Hazelnut Snickers', nameFr: 'Snickers Noisette', ingAr: 'تمر مجدول + بندق + شوكولاتة دارك بلجيكية شوجر فري', ingEn: 'Medjool dates + hazelnuts + Belgian dark chocolate sugar-free', ingFr: 'Dattes Medjool + noisettes + chocolat belge noir sans sucre', img: '/products/branded-box.jpg' },
+  { key: 'tamriya', nameAr: 'تمرية الطحينة', nameEn: 'Tahini Tamriya', nameFr: 'Tamriya Tahini', ingAr: 'تمر مجدول + طحينة ناعمة + سمسم محمّص', ingEn: 'Medjool dates + smooth tahini + toasted sesame', ingFr: 'Dattes Medjool + tahini + sésame grillé', img: '/products/chocolate.jpg', emoji: '🌾' },
+  { key: 'fudge', nameAr: 'فدج الكاجو', nameEn: 'Cashew Fudge', nameFr: 'Fudge Cajou', ingAr: 'تمر مجدول + كاجو مطحون + زبدة طبيعية', ingEn: 'Medjool dates + ground cashew + natural butter', ingFr: 'Dattes Medjool + noix de cajou + beurre naturel', img: '/products/cashew.jpg', emoji: '🥜' },
+  { key: 'sultana', nameAr: 'سلطانة الفستق', nameEn: 'Pistachio Sultana', nameFr: 'Sultane Pistache', ingAr: 'تمر مجدول + فستق حلبي مختار', ingEn: 'Medjool dates + selected pistachio', ingFr: 'Dattes Medjool + pistache sélectionnée', img: '/products/pistachio.jpg', emoji: '🍃' },
+  { key: 'snickers_fool', nameAr: 'سنيكرز الفول السوداني', nameEn: 'Peanut Snickers', nameFr: 'Snickers Cacahuète', ingAr: 'تمر مجدول + فول سوداني محمّص + شوكولاتة دارك بلجيكية شوجر فري', ingEn: 'Medjool dates + roasted peanuts + Belgian dark chocolate sugar-free', ingFr: 'Dattes Medjool + cacahuètes grillées + chocolat belge noir sans sucre', img: '/products/box-pieces.jpg', emoji: '🍫' },
+  { key: 'snickers_bunduq', nameAr: 'سنيكرز البندق', nameEn: 'Hazelnut Snickers', nameFr: 'Snickers Noisette', ingAr: 'تمر مجدول + بندق + شوكولاتة دارك بلجيكية شوجر فري', ingEn: 'Medjool dates + hazelnuts + Belgian dark chocolate sugar-free', ingFr: 'Dattes Medjool + noisettes + chocolat belge noir sans sucre', img: '/products/branded-box.jpg', emoji: '🌰' },
 ]
 
 const PRICING = [
@@ -183,13 +213,39 @@ const PRICING = [
   { labelKey: 'box24' as const, qty: 24, gift: 4, price: 650, featured: false },
 ]
 
+const ONLINE_BOXES = [
+  { labelKey: 'box8' as const, qty: 8, gift: 2, price: 260, featured: false },
+  { labelKey: 'box15' as const, qty: 15, gift: 3, price: 450, featured: true },
+  { labelKey: 'box24' as const, qty: 24, gift: 4, price: 650, featured: false },
+]
+
+const FLAVORS = [
+  { key: 'tamriya', nameAr: 'تمرية الطحينة', nameEn: 'Tahini Tamriya', nameFr: 'Tamriya Tahini', emoji: '🌾' },
+  { key: 'fudge', nameAr: 'فدج الكاجو', nameEn: 'Cashew Fudge', nameFr: 'Fudge Cajou', emoji: '🥜' },
+  { key: 'sultana', nameAr: 'سلطانة الفستق', nameEn: 'Pistachio Sultana', nameFr: 'Sultane Pistache', emoji: '🍃' },
+  { key: 'snickers_fool', nameAr: 'سنيكرز الفول السوداني', nameEn: 'Peanut Snickers', nameFr: 'Snickers Cacahuète', emoji: '🍫' },
+  { key: 'snickers_bunduq', nameAr: 'سنيكرز البندق', nameEn: 'Hazelnut Snickers', nameFr: 'Snickers Noisette', emoji: '🌰' },
+]
+
 const REVIEWS = [
   { text: 'علبة تمر jumar مشكل تحفة الطعم جربت تمرية الطحينة والفدج وسنيكرز والكل لذيذ', author: 'عميلة جُمار', source: 'واتساب' },
   { text: 'خطير كله والله عجبني جدا وباكل فيهم كل يوم على الريق', author: 'عميل جُمار', source: 'واتساب' },
   { text: 'ابني حب المنتج جدا بشكركم صراحه تحفه · الكاجو بجد اكتر من رائعه · Top taste', author: 'عميلة جُمار', source: 'فيسبوك' },
 ]
 
-type CartItem = { key: string; nameAr: string; qty: number; price: number }
+type CartItem = {
+  key: string        // e.g. "box15_abc123" unique per cart line
+  boxLabelKey: string // 'box8' | 'box15' | 'box24'
+  nameAr: string
+  qty: number        // number of boxes
+  price: number      // price per box
+  piecesPerBox: number
+  flavors: Record<string, number> // flavor key → count
+}
+
+function generateCartKey(boxLabelKey: string) {
+  return `${boxLabelKey}_${Math.random().toString(36).slice(2, 7)}`
+}
 
 function getCart(): CartItem[] {
   try { return JSON.parse(localStorage.getItem('jumar_cart') || '[]') } catch { return [] }
@@ -218,34 +274,86 @@ async function syncCartToSupabase(c: CartItem[]) {
   } catch {}
 }
 
+function flavorSummaryAr(flavors: Record<string, number>): string {
+  return Object.entries(flavors)
+    .filter(([, n]) => n > 0)
+    .map(([k, n]) => {
+      const f = FLAVORS.find(f => f.key === k)
+      return `${f?.nameAr || k} ×${n}`
+    })
+    .join('، ')
+}
+
 export default function HomePage() {
   const router = useRouter()
   const [lang, setLang] = useState<Lang>('ar')
   const [menuOpen, setMenuOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
   const [cart, setCart] = useState<CartItem[]>([])
+
+  // Flavor modal state
+  const [modalBox, setModalBox] = useState<typeof ONLINE_BOXES[0] | null>(null)
+  const [modalFlavors, setModalFlavors] = useState<Record<string, number>>({})
+
   const T = t[lang]
   const isRtl = lang === 'ar'
 
   useEffect(() => { setCart(getCart()) }, [])
 
-  function addToCart(p: typeof PRODUCTS[0]) {
+  // Modal helpers
+  const modalTotal = Object.values(modalFlavors).reduce((s, n) => s + n, 0)
+  const modalRemaining = modalBox ? modalBox.qty - modalTotal : 0
+
+  function openModal(box: typeof ONLINE_BOXES[0]) {
+    setModalBox(box)
+    // Default: distribute evenly across flavors
+    const perFlavor = Math.floor(box.qty / FLAVORS.length)
+    const remainder = box.qty % FLAVORS.length
+    const init: Record<string, number> = {}
+    FLAVORS.forEach((f, i) => { init[f.key] = perFlavor + (i < remainder ? 1 : 0) })
+    setModalFlavors(init)
+  }
+
+  function closeModal() {
+    setModalBox(null)
+    setModalFlavors({})
+  }
+
+  function adjustFlavor(key: string, delta: number) {
+    setModalFlavors(prev => {
+      const cur = prev[key] ?? 0
+      const next = cur + delta
+      if (next < 0) return prev
+      if (delta > 0 && modalBox && modalTotal >= modalBox.qty) return prev
+      return { ...prev, [key]: next }
+    })
+  }
+
+  function confirmModal() {
+    if (!modalBox || modalRemaining !== 0) return
+    const boxLabel = T[modalBox.labelKey]
+    const newItem: CartItem = {
+      key: generateCartKey(modalBox.labelKey),
+      boxLabelKey: modalBox.labelKey,
+      nameAr: boxLabel,
+      qty: 1,
+      price: modalBox.price,
+      piecesPerBox: modalBox.qty,
+      flavors: { ...modalFlavors },
+    }
     setCart(prev => {
-      const exists = prev.find(i => i.key === p.key)
-      const next = exists
-        ? prev.map(i => i.key === p.key ? { ...i, qty: i.qty + 1 } : i)
-        : [...prev, { key: p.key, nameAr: p.nameAr, qty: 1, price: 40 }]
+      const next = [...prev, newItem]
       saveCart(next)
       syncCartToSupabase(next)
       return next
     })
+    closeModal()
+    setCartOpen(true)
   }
 
-  function removeFromCart(key: string) {
+  function removeCartItem(key: string) {
     setCart(prev => {
-      const next = prev
-        .map(i => i.key === key ? { ...i, qty: i.qty - 1 } : i)
-        .filter(i => i.qty > 0)
+      const next = prev.filter(i => i.key !== key)
       saveCart(next)
       syncCartToSupabase(next)
       return next
@@ -266,6 +374,9 @@ export default function HomePage() {
     setCartOpen(false)
     router.push('/order?cart=1')
   }
+
+  const flavorName = (f: typeof FLAVORS[0]) =>
+    lang === 'ar' ? f.nameAr : lang === 'en' ? f.nameEn : f.nameFr
 
   const productName = (p: typeof PRODUCTS[0]) =>
     lang === 'ar' ? p.nameAr : lang === 'en' ? p.nameEn : p.nameFr
@@ -342,6 +453,137 @@ export default function HomePage() {
         </div>
       </nav>
 
+      {/* ── FLAVOR PICKER MODAL ─────────────────────────── */}
+      {modalBox && (
+        <>
+          <div onClick={closeModal} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 500, backdropFilter: 'blur(3px)' }} />
+          <div dir="rtl" style={{
+            position: 'fixed', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 'min(480px, 95vw)',
+            maxHeight: '90vh',
+            background: '#FAF5EB',
+            borderRadius: '1.75rem',
+            zIndex: 501,
+            overflow: 'hidden',
+            display: 'flex', flexDirection: 'column',
+            boxShadow: '0 32px 80px rgba(0,0,0,0.35)',
+          }}>
+            {/* Modal header */}
+            <div style={{ background: '#3D2310', padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+              <div>
+                <p style={{ color: 'rgba(201,168,76,0.7)', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', margin: 0, marginBottom: '0.2rem' }}>
+                  {T[modalBox.labelKey]}
+                </p>
+                <h3 style={{ color: '#C9A84C', fontWeight: 700, fontSize: '1.05rem', margin: 0 }}>
+                  {T.modalTitle}
+                </h3>
+              </div>
+              <button onClick={closeModal} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'rgba(255,255,255,0.8)', fontSize: '1rem', cursor: 'pointer', width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            </div>
+
+            {/* Remaining counter */}
+            <div style={{
+              padding: '0.85rem 1.5rem',
+              background: modalRemaining === 0 ? 'rgba(0,160,80,0.1)' : 'rgba(201,168,76,0.1)',
+              borderBottom: '1px solid rgba(201,168,76,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              flexShrink: 0,
+            }}>
+              <span style={{ fontSize: '0.85rem', color: '#3D2310', fontWeight: 700 }}>
+                {modalRemaining === 0
+                  ? T.modalDone
+                  : T.modalRemaining.replace('{n}', String(modalRemaining))}
+              </span>
+              <div style={{ display: 'flex', gap: '0.25rem' }}>
+                {Array.from({ length: modalBox.qty }).map((_, i) => (
+                  <div key={i} style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: i < modalTotal ? '#C9A84C' : 'rgba(201,168,76,0.25)',
+                    transition: 'background 0.15s',
+                  }} />
+                ))}
+              </div>
+            </div>
+
+            {/* Flavor rows */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem 1.25rem' }}>
+              {FLAVORS.map(f => {
+                const count = modalFlavors[f.key] ?? 0
+                return (
+                  <div key={f.key} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '0.85rem 0',
+                    borderBottom: '1px solid rgba(201,168,76,0.1)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <span style={{ fontSize: '1.4rem' }}>{f.emoji}</span>
+                      <div>
+                        <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#3D2310', margin: 0 }}>{flavorName(f)}</p>
+                        {count > 0 && (
+                          <p style={{ fontSize: '0.72rem', color: '#C9A84C', margin: 0, fontWeight: 600 }}>
+                            {count} {lang === 'ar' ? 'قطعة' : lang === 'en' ? 'pcs' : 'pcs'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => adjustFlavor(f.key, -1)}
+                        disabled={count === 0}
+                        style={{
+                          width: 32, height: 32, border: '1.5px solid',
+                          borderColor: count === 0 ? 'rgba(201,168,76,0.2)' : '#C9A84C',
+                          borderRadius: '50%', background: 'transparent',
+                          color: count === 0 ? 'rgba(61,35,16,0.25)' : '#3D2310',
+                          fontWeight: 700, cursor: count === 0 ? 'default' : 'pointer',
+                          fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>−</button>
+                      <span style={{ fontWeight: 900, color: '#3D2310', minWidth: 24, textAlign: 'center', fontSize: '1rem' }}>{count}</span>
+                      <button
+                        onClick={() => adjustFlavor(f.key, 1)}
+                        disabled={modalRemaining === 0}
+                        style={{
+                          width: 32, height: 32, border: '1.5px solid',
+                          borderColor: modalRemaining === 0 ? 'rgba(201,168,76,0.2)' : '#C9A84C',
+                          borderRadius: '50%',
+                          background: modalRemaining === 0 ? 'rgba(201,168,76,0.15)' : '#C9A84C',
+                          color: modalRemaining === 0 ? 'rgba(61,35,16,0.3)' : '#3D2310',
+                          fontWeight: 700, cursor: modalRemaining === 0 ? 'default' : 'pointer',
+                          fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>+</button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Modal footer */}
+            <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid rgba(201,168,76,0.15)', background: '#fff', display: 'flex', gap: '0.75rem', flexShrink: 0 }}>
+              <button onClick={closeModal} style={{
+                flex: 1, padding: '0.75rem', borderRadius: '2rem',
+                border: '1.5px solid rgba(61,35,16,0.2)', background: 'transparent',
+                color: '#7A5C3A', fontWeight: 700, cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: '0.88rem',
+              }}>{T.cancelModal}</button>
+              <button
+                onClick={confirmModal}
+                disabled={modalRemaining !== 0}
+                style={{
+                  flex: 2, padding: '0.75rem', borderRadius: '2rem', border: 'none',
+                  background: modalRemaining === 0 ? '#3D2310' : 'rgba(61,35,16,0.2)',
+                  color: modalRemaining === 0 ? '#C9A84C' : 'rgba(201,168,76,0.4)',
+                  fontWeight: 700, cursor: modalRemaining === 0 ? 'pointer' : 'default',
+                  fontFamily: 'inherit', fontSize: '0.95rem',
+                  transition: 'all 0.2s',
+                }}>
+                {T.addToCart} — {modalBox.price} ج
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* ── CART DRAWER ─────────────────────────────────── */}
       {cartOpen && (
         <>
@@ -349,7 +591,7 @@ export default function HomePage() {
           <div style={{
             position: 'fixed', top: 0, bottom: 0,
             [isRtl ? 'left' : 'right']: 0,
-            width: 'min(360px, 100vw)',
+            width: 'min(380px, 100vw)',
             background: '#FAF5EB', zIndex: 301,
             display: 'flex', flexDirection: 'column',
             boxShadow: '-4px 0 24px rgba(0,0,0,0.18)',
@@ -366,20 +608,40 @@ export default function HomePage() {
                 <div style={{ textAlign: 'center', paddingTop: '3rem', color: '#7A5C3A' }}>
                   <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🛒</div>
                   <p style={{ fontWeight: 700 }}>السلة فاضية</p>
-                  <p style={{ fontSize: '0.85rem', marginTop: '0.4rem' }}>ضيف منتجات من المنيو</p>
+                  <p style={{ fontSize: '0.85rem', marginTop: '0.4rem' }}>اختار علبة من المنيو</p>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {cart.map(item => (
-                    <div key={item.key} style={{ background: '#fff', borderRadius: '1rem', padding: '0.9rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(201,168,76,0.2)' }}>
-                      <div>
-                        <p style={{ fontWeight: 700, color: '#3D2310', fontSize: '0.9rem', margin: 0 }}>{item.nameAr}</p>
-                        <p style={{ color: '#C9A84C', fontWeight: 700, fontSize: '0.85rem', margin: '0.2rem 0 0' }}>{item.price * item.qty} ج</p>
+                    <div key={item.key} style={{
+                      background: '#fff', borderRadius: '1.25rem', padding: '1rem',
+                      border: '1px solid rgba(201,168,76,0.2)',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.6rem' }}>
+                        <div>
+                          <p style={{ fontWeight: 700, color: '#3D2310', fontSize: '0.9rem', margin: 0 }}>{item.nameAr}</p>
+                          <p style={{ color: '#7A5C3A', fontSize: '0.72rem', margin: '0.15rem 0 0' }}>{item.piecesPerBox} قطعة</p>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontWeight: 900, color: '#C9A84C', fontSize: '0.95rem' }}>{item.price} ج</span>
+                          <button onClick={() => removeCartItem(item.key)} style={{ background: 'rgba(200,0,0,0.07)', border: 'none', color: '#c00', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗑</button>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <button onClick={() => removeFromCart(item.key)} style={{ width: 28, height: 28, border: '1.5px solid #C9A84C', borderRadius: '50%', background: 'transparent', color: '#3D2310', fontWeight: 700, cursor: 'pointer', fontSize: '1rem' }}>−</button>
-                        <span style={{ fontWeight: 700, color: '#3D2310', minWidth: 20, textAlign: 'center' }}>{item.qty}</span>
-                        <button onClick={() => addToCart(PRODUCTS.find(p => p.key === item.key)!)} style={{ width: 28, height: 28, border: '1.5px solid #C9A84C', borderRadius: '50%', background: '#C9A84C', color: '#3D2310', fontWeight: 700, cursor: 'pointer', fontSize: '1rem' }}>+</button>
+                      {/* Flavor breakdown */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                        {Object.entries(item.flavors).filter(([, n]) => n > 0).map(([k, n]) => {
+                          const f = FLAVORS.find(f => f.key === k)
+                          return (
+                            <span key={k} style={{
+                              background: 'rgba(201,168,76,0.12)', color: '#5C3D1E',
+                              fontSize: '0.68rem', fontWeight: 600,
+                              padding: '0.2rem 0.5rem', borderRadius: '1rem',
+                              border: '1px solid rgba(201,168,76,0.2)',
+                            }}>
+                              {f?.emoji} {f?.nameAr} ×{n}
+                            </span>
+                          )
+                        })}
                       </div>
                     </div>
                   ))}
@@ -392,7 +654,7 @@ export default function HomePage() {
             {cart.length > 0 && (
               <div style={{ padding: '1rem', borderTop: '1px solid rgba(201,168,76,0.2)', background: '#fff' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <span style={{ fontWeight: 700, color: '#3D2310' }}>الإجمالي ({cartCount} قطعة)</span>
+                  <span style={{ fontWeight: 700, color: '#3D2310' }}>الإجمالي ({cartCount} علبة)</span>
                   <span style={{ fontWeight: 900, color: '#C9A84C', fontSize: '1.1rem' }}>{cartTotal} ج</span>
                 </div>
                 {cartTotal < 1500 && (
@@ -475,7 +737,7 @@ export default function HomePage() {
             </p>
 
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: isRtl ? 'flex-start' : 'flex-start' }}>
-              <Link href="/order" style={btnPrimaryStyle}>{T.orderNow}</Link>
+              <a href="#menu" style={btnPrimaryStyle}>{T.orderNow}</a>
               <a href="#menu" style={btnSecondaryStyle}>{T.viewMenu}</a>
             </div>
           </div>
@@ -511,44 +773,114 @@ export default function HomePage() {
       <section id="menu" style={{ padding: 'clamp(3rem,6vw,5rem) 1.5rem', background: '#FAF5EB' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <p style={sectionTagStyle}>🌿 {T.menuTitle}</p>
-          <h2 style={sectionTitleStyle}>{T.menuSub}</h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '1.5rem', marginTop: '2.5rem' }}>
-            {PRODUCTS.map(p => {
-              const inCart = cart.find(i => i.key === p.key)
-              return (
-              <div key={p.key} style={{ background: '#fff', borderRadius: '1.5rem', overflow: 'hidden', boxShadow: '0 4px 20px rgba(61,35,16,0.08)', border: `1.5px solid ${inCart ? '#C9A84C' : 'rgba(201,168,76,0.15)'}`, transition: 'transform 0.2s, box-shadow 0.2s' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 32px rgba(61,35,16,0.14)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = ''; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 20px rgba(61,35,16,0.08)' }}>
-                <div style={{ position: 'relative', height: 180 }}>
+          {/* ── FLAVORS SHOWCASE ── */}
+          <h2 style={sectionTitleStyle}>{T.menuFlavorsTitle}</h2>
+          <p style={{ textAlign: 'center', color: '#7A5C3A', fontSize: '0.9rem', marginBottom: '2.5rem', marginTop: '0.5rem' }}>{T.menuFlavorsSub}</p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: '1rem', marginBottom: '4rem' }}>
+            {PRODUCTS.map(p => (
+              <div key={p.key} style={{
+                background: '#fff', borderRadius: '1.5rem', overflow: 'hidden',
+                boxShadow: '0 4px 20px rgba(61,35,16,0.07)',
+                border: '1.5px solid rgba(201,168,76,0.12)',
+              }}>
+                <div style={{ position: 'relative', height: 160 }}>
                   <Image src={p.img} alt={productName(p)} fill style={{ objectFit: 'cover' }} />
-                </div>
-                <div style={{ padding: '1.2rem' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#3D2310', marginBottom: '0.4rem' }}>{productName(p)}</h3>
-                  <p style={{ fontSize: '0.75rem', color: '#7A5C3A', lineHeight: 1.6 }}>{productIng(p)}</p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.8rem' }}>
-                    <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#C9A84C', margin: 0 }}>{T.price}</p>
-                    {inCart ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <button onClick={() => removeFromCart(p.key)} style={{ width: 26, height: 26, border: '1.5px solid #C9A84C', borderRadius: '50%', background: 'transparent', color: '#3D2310', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
-                        <span style={{ fontWeight: 700, color: '#3D2310', fontSize: '0.9rem', minWidth: 16, textAlign: 'center' }}>{inCart.qty}</span>
-                        <button onClick={() => addToCart(p)} style={{ width: 26, height: 26, border: '1.5px solid #C9A84C', borderRadius: '50%', background: '#C9A84C', color: '#3D2310', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
-                      </div>
-                    ) : (
-                      <button onClick={() => { addToCart(p); setCartOpen(true) }} style={{ background: '#3D2310', color: '#C9A84C', border: 'none', borderRadius: '2rem', padding: '0.35rem 0.85rem', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        + أضف
-                      </button>
-                    )}
+                  <div style={{ position: 'absolute', top: '0.6rem', insetInlineStart: '0.6rem', background: 'rgba(250,245,235,0.9)', borderRadius: '2rem', padding: '0.2rem 0.5rem', fontSize: '0.7rem', fontWeight: 700, color: '#3D2310', backdropFilter: 'blur(4px)' }}>
+                    {p.emoji}
                   </div>
                 </div>
+                <div style={{ padding: '1rem 1.1rem' }}>
+                  <h3 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#3D2310', marginBottom: '0.35rem' }}>{productName(p)}</h3>
+                  <p style={{ fontSize: '0.72rem', color: '#7A5C3A', lineHeight: 1.6, margin: 0 }}>{productIng(p)}</p>
+                </div>
               </div>
-            )})}
-
+            ))}
             {/* Seasonal coming soon */}
-            <div style={{ background: 'linear-gradient(135deg,#3D2310,#5C3D1E)', borderRadius: '1.5rem', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.2rem', textAlign: 'center', minHeight: 300 }}>
-              <span style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🌙</span>
-              <h3 style={{ color: '#C9A84C', fontWeight: 700, fontSize: '1rem', marginBottom: '0.6rem' }}>{T.seasonal}</h3>
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', lineHeight: 1.6 }}>{T.seasonalDesc}</p>
+            <div style={{ background: 'linear-gradient(135deg,#3D2310,#5C3D1E)', borderRadius: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem 1rem', textAlign: 'center', minHeight: 260 }}>
+              <span style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🌙</span>
+              <h3 style={{ color: '#C9A84C', fontWeight: 700, fontSize: '0.88rem', marginBottom: '0.5rem' }}>{T.seasonal}</h3>
+              <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.72rem', lineHeight: 1.6, margin: 0 }}>{T.seasonalDesc}</p>
+            </div>
+          </div>
+
+          {/* ── ONLINE BOXES ── */}
+          <div style={{ borderTop: '2px solid rgba(201,168,76,0.2)', paddingTop: '3rem' }}>
+            <p style={sectionTagStyle}>📦 {T.menuBoxesTitle}</p>
+            <h2 style={sectionTitleStyle}>{T.menuBoxesSub}</h2>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: '1.25rem', marginTop: '2.5rem' }}>
+              {ONLINE_BOXES.map(box => (
+                <div key={box.labelKey} style={{
+                  background: box.featured ? 'linear-gradient(145deg,#3D2310,#5C3D1E)' : '#fff',
+                  borderRadius: '1.75rem',
+                  border: box.featured ? '2px solid #C9A84C' : '1.5px solid rgba(201,168,76,0.2)',
+                  padding: '1.75rem 1.5rem',
+                  position: 'relative',
+                  boxShadow: box.featured ? '0 12px 40px rgba(61,35,16,0.25)' : '0 4px 16px rgba(61,35,16,0.06)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+                }}>
+                  {box.featured && (
+                    <span style={{
+                      position: 'absolute', top: '-0.85rem', left: '50%', transform: 'translateX(-50%)',
+                      background: '#C9A84C', color: '#3D2310', fontSize: '0.65rem', fontWeight: 700,
+                      padding: '0.25rem 1rem', borderRadius: '1rem', whiteSpace: 'nowrap',
+                    }}>{T.popular}</span>
+                  )}
+
+                  {/* Box icon */}
+                  <div style={{
+                    width: 70, height: 70, borderRadius: '50%',
+                    background: box.featured ? 'rgba(201,168,76,0.15)' : 'rgba(61,35,16,0.06)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    marginBottom: '1rem', fontSize: '2rem',
+                  }}>
+                    🎁
+                  </div>
+
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: box.featured ? '#C9A84C' : '#3D2310', marginBottom: '0.35rem' }}>
+                    {T[box.labelKey]}
+                  </h3>
+
+                  <p style={{ fontSize: '0.78rem', color: box.featured ? 'rgba(201,168,76,0.7)' : '#7A5C3A', marginBottom: '0.5rem' }}>
+                    {box.qty} قطعة + {box.gift} هدية مجانية
+                  </p>
+
+                  {/* Flavor chips preview */}
+                  <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '1.25rem' }}>
+                    {FLAVORS.map(f => (
+                      <span key={f.key} style={{
+                        fontSize: '0.85rem',
+                        opacity: 0.7,
+                      }}>{f.emoji}</span>
+                    ))}
+                  </div>
+
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <span style={{ fontSize: '2.2rem', fontWeight: 900, color: box.featured ? '#fff' : '#3D2310' }}>{box.price}</span>
+                    <span style={{ fontSize: '0.85rem', color: box.featured ? 'rgba(255,255,255,0.6)' : '#7A5C3A', marginInlineStart: '0.3rem' }}>ج</span>
+                  </div>
+
+                  <button
+                    onClick={() => openModal(box)}
+                    style={{
+                      width: '100%',
+                      background: box.featured ? '#C9A84C' : '#3D2310',
+                      color: box.featured ? '#3D2310' : '#C9A84C',
+                      border: 'none', borderRadius: '2rem',
+                      padding: '0.75rem 1rem',
+                      fontWeight: 700, fontSize: '0.9rem',
+                      cursor: 'pointer', fontFamily: 'inherit',
+                      transition: 'opacity 0.15s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                    onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                  >
+                    🎨 {T.chooseFlavors}
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -638,7 +970,7 @@ export default function HomePage() {
         <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(2rem,5vw,3rem)', color: '#C9A84C', marginBottom: '1rem' }}>{T.ctaTitle}</h2>
         <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1rem', marginBottom: '2rem' }}>{T.ctaSub}</p>
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link href="/order" style={{ ...btnPrimaryStyle, background: '#C9A84C', color: '#3D2310' }}>{T.ctaBtn}</Link>
+          <a href="#menu" style={{ ...btnPrimaryStyle, background: '#C9A84C', color: '#3D2310' }}>{T.ctaBtn}</a>
           <a href="https://wa.me/201110330052" target="_blank" rel="noopener noreferrer" style={{ ...btnSecondaryStyle, borderColor: 'rgba(201,168,76,0.4)', color: '#C9A84C' }}>
             💬 {T.ctaWa}
           </a>
