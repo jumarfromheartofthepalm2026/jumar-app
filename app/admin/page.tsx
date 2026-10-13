@@ -38,9 +38,11 @@ const RECIPES: Record<string, Record<string, number>> = {
 
 // أحجام العلب
 const BOX_SIZES = [
+  { label: 'علبة ٢', pieces: 2 },
+  { label: 'علبة ٥', pieces: 5 },
   { label: 'علبة ٨', pieces: 8 },
   { label: 'علبة ١٥', pieces: 15 },
-  { label: 'علبة ٢٤', pieces: 24 },
+  { label: 'علبة ٢٢', pieces: 22 },
 ]
 
 const DEFAULT_INGREDIENTS = [
