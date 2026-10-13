@@ -49,7 +49,8 @@ const t = {
     ctaBtn: 'اطلب الآن',
     ctaWa: 'تواصل عبر واتساب',
     footerTagline: 'من قلب النخلة · من أيدينا إلى بيتك',
-    footerLinks: ['قصتنا', 'المنيو', 'الأسعار', 'اطلب الآن'],
+    footerLinks: ['قصتنا', 'المنيو', 'الأسعار', 'اطلب الآن', 'الأسئلة الشائعة'],
+    faq: 'الأسئلة الشائعة',
     footerContact: 'تواصل معنا',
     footerLocation: 'أونلاين ستور · التجمع الخامس · القاهرة',
     footerDelivery: '🚚 توصيل مجاني داخل التجمع حتى ٣١/١٠',
@@ -100,7 +101,8 @@ const t = {
     ctaBtn: 'Order Now',
     ctaWa: 'Chat on WhatsApp',
     footerTagline: 'From the heart of the palm · From our hands to your home',
-    footerLinks: ['Our Story', 'Menu', 'Pricing', 'Order Now'],
+    footerLinks: ['Our Story', 'Menu', 'Pricing', 'Order Now', 'FAQ'],
+    faq: 'FAQ',
     footerContact: 'Contact Us',
     footerLocation: 'Online Store · Fifth Settlement · Cairo',
     footerDelivery: '🚚 Free delivery in Fifth Settlement until 31/10',
@@ -151,7 +153,8 @@ const t = {
     ctaBtn: 'Commander',
     ctaWa: 'WhatsApp',
     footerTagline: 'Du cœur du palmier · De nos mains à votre maison',
-    footerLinks: ['Notre histoire', 'Menu', 'Tarifs', 'Commander'],
+    footerLinks: ['Notre histoire', 'Menu', 'Tarifs', 'Commander', 'FAQ'],
+    faq: 'FAQ',
     footerContact: 'Contactez-nous',
     footerLocation: 'Boutique en ligne · Fifth Settlement · Le Caire',
     footerDelivery: '🚚 Livraison gratuite au Fifth Settlement jusqu\'au 31/10',
@@ -235,6 +238,7 @@ export default function HomePage() {
           <li><a href="#story" style={navLinkStyle}>{T.nav.story}</a></li>
           <li><a href="#menu" style={navLinkStyle}>{T.nav.menu}</a></li>
           <li><a href="#pricing" style={navLinkStyle}>{T.nav.pricing}</a></li>
+          <li><a href="/faq" style={navLinkStyle}>{T.faq}</a></li>
           <li>
             <Link href="/order" style={{ background: '#3D2310', color: '#C9A84C', padding: '0.45rem 1.2rem', borderRadius: '2rem', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 700 }}>
               {T.nav.order}
@@ -270,7 +274,7 @@ export default function HomePage() {
           background: '#FAF5EB', borderBottom: '1px solid rgba(201,168,76,0.18)',
           padding: '1rem 1.5rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem',
         }}>
-          {[['#story', T.nav.story], ['#menu', T.nav.menu], ['#pricing', T.nav.pricing]].map(([href, label]) => (
+          {[['#story', T.nav.story], ['#menu', T.nav.menu], ['#pricing', T.nav.pricing], ['/faq', T.faq]].map(([href, label]) => (
             <a key={href} href={href} onClick={() => setMenuOpen(false)} style={{ ...navLinkStyle, fontSize: '1rem' }}>{label}</a>
           ))}
           <Link href="/order" onClick={() => setMenuOpen(false)} style={{ background: '#3D2310', color: '#C9A84C', padding: '0.7rem 1.2rem', borderRadius: '2rem', textDecoration: 'none', fontSize: '1rem', fontWeight: 700, textAlign: 'center' }}>
@@ -464,7 +468,7 @@ export default function HomePage() {
           <div>
             <p style={{ fontWeight: 700, color: '#fff', marginBottom: '0.75rem', fontSize: '0.85rem' }}>{T.nav.menu}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {(['#story', '#menu', '#pricing', '/order'] as const).map((href, i) => (
+              {(['#story', '#menu', '#pricing', '/order', '/faq'] as const).map((href, i) => (
                 <a key={i} href={href} style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none', fontSize: '0.82rem' }}>{T.footerLinks[i]}</a>
               ))}
             </div>
