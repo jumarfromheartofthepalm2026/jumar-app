@@ -6,7 +6,6 @@ import { useState, useEffect, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useSearchParams } from 'next/navigation'
 
 type Lang = 'ar' | 'en' | 'fr'
 
@@ -14,24 +13,25 @@ const t = {
   ar: {
     dir: 'rtl' as const,
     orderOnline: 'اطلب أونلاين',
-    cartTitle: 'سلة التسوق',
-    cartSub: 'راجع طلبك قبل الإكمال',
-    emptyCart: 'السلة فاضية',
-    backToMenu: '← رجوع للمنيو',
+    choosePackage: 'اختار الباكج',
+    packageSub: 'كلما زاد، كلما وفّرت — وفي هدايا على العلب الكبيرة 🎁',
+    giftLabel: (n: number) => `+${n} قطعة هدية 🎁`,
+    popular: 'الأكثر طلباً',
+    chooseFlavors: 'اختار النكهات',
+    distributeSub: (n: number) => `وزّع ${n} قطعة على النكهات اللي بتحبها`,
+    flavorsLabel: 'النكهات — متبقي:',
+    addToCart: '+ أضف للسلة',
+    backToPkg: '← رجوع',
+    cartTitle: 'سلتك',
+    emptyCart: 'السلة فاضية — اختار باكج من فوق',
     pieces: 'قطعة',
     total: 'الإجمالي',
     boxes: 'علبة',
     freeDelivery: '✅ توصيل مجاني!',
     addForFree: (n: number) => `🚚 أضف ${n} ج للتوصيل المجاني`,
+    addMore: '+ أضف علبة تانية',
     continueOrder: 'إكمال الطلب ←',
-    choosePackage: 'اختار الباكج',
-    packageSub: 'كلما زاد، كلما وفّرت — وفي هدايا على العلب الكبيرة 🎁',
-    giftLabel: (n: number) => `+${n} قطعة هدية 🎁`,
-    popular: 'الأكثر طلباً',
-    nextFlavors: 'التالي — اختار النكهات ←',
     detailsTitle: 'بياناتك',
-    distributeSub: (n: number) => `وزّع ${n} قطعة على النكهات اللي بتحبها`,
-    flavorsLabel: 'النكهات — متبقي:',
     nameLabel: 'الاسم',
     namePlaceholder: 'اسمك الكامل',
     phoneLabel: 'رقم التليفون',
@@ -66,24 +66,25 @@ const t = {
   en: {
     dir: 'ltr' as const,
     orderOnline: 'Order Online',
-    cartTitle: 'Shopping Cart',
-    cartSub: 'Review your order before completing',
-    emptyCart: 'Your cart is empty',
-    backToMenu: '← Back to Menu',
+    choosePackage: 'Choose Package',
+    packageSub: 'The more you order, the more you save — gifts included on large boxes 🎁',
+    giftLabel: (n: number) => `+${n} gift piece 🎁`,
+    popular: 'Most Popular',
+    chooseFlavors: 'Choose Flavors',
+    distributeSub: (n: number) => `Distribute ${n} pieces across your favorite flavors`,
+    flavorsLabel: 'Flavors — remaining:',
+    addToCart: '+ Add to Cart',
+    backToPkg: '← Back',
+    cartTitle: 'Your Cart',
+    emptyCart: 'Cart is empty — choose a package above',
     pieces: 'pieces',
     total: 'Total',
     boxes: 'box(es)',
     freeDelivery: '✅ Free delivery!',
     addForFree: (n: number) => `🚚 Add ${n} EGP for free delivery`,
+    addMore: '+ Add another box',
     continueOrder: 'Complete Order →',
-    choosePackage: 'Choose Package',
-    packageSub: 'The more you order, the more you save — gifts included on large boxes 🎁',
-    giftLabel: (n: number) => `+${n} gift piece 🎁`,
-    popular: 'Most Popular',
-    nextFlavors: 'Next — Choose Flavors →',
     detailsTitle: 'Your Details',
-    distributeSub: (n: number) => `Distribute ${n} pieces across your favorite flavors`,
-    flavorsLabel: 'Flavors — remaining:',
     nameLabel: 'Name',
     namePlaceholder: 'Your full name',
     phoneLabel: 'Phone number',
@@ -104,7 +105,7 @@ const t = {
     confirmBtn: '✅ Confirm Order',
     doneTitle: 'Order Placed!',
     orderNum: 'Order number:',
-    doneSub: (phone: string) => `We'll contact you at ${phone} to confirm the order and schedule delivery · Delivery within 4 days`,
+    doneSub: (phone: string) => `We'll contact you at ${phone} to confirm · Delivery within 4 days`,
     whatsapp: '💬 Chat on WhatsApp',
     home: '🏠 Home',
     freeDeliveryBadge: '· Free delivery ✅',
@@ -118,24 +119,25 @@ const t = {
   fr: {
     dir: 'ltr' as const,
     orderOnline: 'Commander en ligne',
-    cartTitle: 'Panier',
-    cartSub: 'Vérifiez votre commande avant de continuer',
-    emptyCart: 'Votre panier est vide',
-    backToMenu: '← Retour au menu',
+    choosePackage: 'Choisir le forfait',
+    packageSub: 'Plus vous commandez, plus vous économisez — cadeaux inclus sur les grandes boîtes 🎁',
+    giftLabel: (n: number) => `+${n} pièce cadeau 🎁`,
+    popular: 'Plus populaire',
+    chooseFlavors: 'Choisir les saveurs',
+    distributeSub: (n: number) => `Répartissez ${n} pièces entre vos saveurs préférées`,
+    flavorsLabel: 'Saveurs — restant :',
+    addToCart: '+ Ajouter au panier',
+    backToPkg: '← Retour',
+    cartTitle: 'Votre panier',
+    emptyCart: 'Panier vide — choisissez un forfait ci-dessus',
     pieces: 'pièces',
     total: 'Total',
     boxes: 'boîte(s)',
     freeDelivery: '✅ Livraison gratuite !',
     addForFree: (n: number) => `🚚 Ajoutez ${n} EGP pour la livraison gratuite`,
+    addMore: '+ Ajouter une autre boîte',
     continueOrder: 'Finaliser la commande →',
-    choosePackage: 'Choisir le forfait',
-    packageSub: 'Plus vous commandez, plus vous économisez — cadeaux inclus sur les grandes boîtes 🎁',
-    giftLabel: (n: number) => `+${n} pièce cadeau 🎁`,
-    popular: 'Plus populaire',
-    nextFlavors: 'Suivant — Choisir les saveurs →',
     detailsTitle: 'Vos coordonnées',
-    distributeSub: (n: number) => `Répartissez ${n} pièces entre vos saveurs préférées`,
-    flavorsLabel: 'Saveurs — restant :',
     nameLabel: 'Nom',
     namePlaceholder: 'Votre nom complet',
     phoneLabel: 'Numéro de téléphone',
@@ -156,7 +158,7 @@ const t = {
     confirmBtn: '✅ Confirmer la commande',
     doneTitle: 'Commande enregistrée !',
     orderNum: 'N° de commande :',
-    doneSub: (phone: string) => `Nous vous contacterons au ${phone} pour confirmer la commande · Livraison en 4 jours`,
+    doneSub: (phone: string) => `Nous vous contacterons au ${phone} pour confirmer · Livraison en 4 jours`,
     whatsapp: '💬 Chat WhatsApp',
     home: '🏠 Accueil',
     freeDeliveryBadge: '· Livraison gratuite ✅',
@@ -183,28 +185,30 @@ function flavorLabel(f: typeof FLAVORS[0], lang: Lang) {
 
 type CartItem = {
   key: string
-  boxLabelKey: string
   nameAr: string
   qty: number
   price: number
   piecesPerBox: number
+  gift: number
   flavors: Record<string, number>
 }
-type Step = 'package' | 'cart' | 'details' | 'confirm' | 'done'
+
+type Step = 'build' | 'details' | 'confirm' | 'done'
 
 const brown = '#3D2310'
 const gold = '#C9A84C'
 const cream = '#FAF5EB'
 
 function OrderPageInner() {
-  const searchParams = useSearchParams()
-  const fromCart = searchParams.get('cart') === '1'
-
   const [lang, setLang] = useState<Lang>('ar')
-  const [step, setStep] = useState<Step>(fromCart ? 'cart' : 'package')
-  const [selectedPkg, setSelectedPkg] = useState<{ label: string; qty: number; gift: number; price: number; popular?: boolean } | null>(null)
+  const [step, setStep] = useState<Step>('build')
+
+  // build step state
+  const [selectedPkg, setSelectedPkg] = useState<typeof t['ar']['PACKAGES'][0] | null>(null)
   const [flavors, setFlavors] = useState<Record<string, number>>({})
   const [cartItems, setCartItems] = useState<CartItem[]>([])
+
+  // details step state
   const [form, setForm] = useState({ name: '', phone: '', address: '', notes: '' })
   const [loading, setLoading] = useState(false)
   const [orderNum, setOrderNum] = useState('')
@@ -213,14 +217,11 @@ function OrderPageInner() {
     try {
       const saved = localStorage.getItem('jumar_lang') as Lang | null
       if (saved && ['ar','en','fr'].includes(saved)) setLang(saved)
+      // load cart from homepage if exists
+      const cart = JSON.parse(localStorage.getItem('jumar_cart') || '[]') as CartItem[]
+      if (cart.length > 0) setCartItems(cart)
     } catch {}
-    if (fromCart) {
-      try {
-        const saved = JSON.parse(localStorage.getItem('jumar_cart') || '[]') as CartItem[]
-        setCartItems(saved)
-      } catch {}
-    }
-  }, [fromCart])
+  }, [])
 
   function changeLang(l: Lang) {
     setLang(l)
@@ -228,27 +229,40 @@ function OrderPageInner() {
   }
 
   const T = t[lang]
-
   const totalFlavors = Object.values(flavors).reduce((a, b) => a + b, 0)
   const remainingFlavors = (selectedPkg?.qty || 0) - totalFlavors
-
-  const cartTotal = cartItems.reduce((s, i) => s + i.qty * i.price, 0)
-  const cartCount = cartItems.length
+  const cartTotal = cartItems.reduce((s, i) => s + i.price, 0)
   const freeDelivery = cartTotal >= 1500
 
   function setFlavor(key: string, val: number) {
     setFlavors(prev => ({ ...prev, [key]: Math.max(0, val) }))
   }
 
-  function removeCartItem(key: string) {
-    setCartItems(prev => {
-      const next = prev.filter(i => i.key !== key)
-      try { localStorage.setItem('jumar_cart', JSON.stringify(next)) } catch {}
-      return next
-    })
+  function addToCart() {
+    if (!selectedPkg || remainingFlavors !== 0) return
+    const item: CartItem = {
+      key: `${selectedPkg.qty}_${Date.now()}`,
+      nameAr: selectedPkg.label,
+      qty: 1,
+      price: selectedPkg.price,
+      piecesPerBox: selectedPkg.qty,
+      gift: selectedPkg.gift,
+      flavors: { ...flavors },
+    }
+    const next = [...cartItems, item]
+    setCartItems(next)
+    try { localStorage.setItem('jumar_cart', JSON.stringify(next)) } catch {}
+    // reset for next item
+    setSelectedPkg(null)
+    setFlavors({})
   }
 
-  // Display name for a cart item in current lang
+  function removeCartItem(key: string) {
+    const next = cartItems.filter(i => i.key !== key)
+    setCartItems(next)
+    try { localStorage.setItem('jumar_cart', JSON.stringify(next)) } catch {}
+  }
+
   function cartItemName(item: CartItem) {
     if (lang === 'ar') return item.nameAr
     const pkg = T.PACKAGES.find(p => p.qty === item.piecesPerBox)
@@ -258,63 +272,45 @@ function OrderPageInner() {
   async function submitOrder() {
     setLoading(true)
     const num = `JM-${Date.now().toString().slice(-6)}`
+    const itemsDesc = cartItems.map(i => {
+      const flavorLine = Object.entries(i.flavors).filter(([,n]) => n > 0)
+        .map(([k,n]) => `${FLAVORS.find(f=>f.key===k)?.labelAr}×${n}`).join('+')
+      return `${i.nameAr}${i.gift > 0 ? `+${i.gift}هدية` : ''}(${flavorLine})`
+    }).join(' · ')
 
-    if (fromCart && cartItems.length > 0) {
-      const itemsDesc = cartItems.map(i => {
-        const flavorLine = Object.entries(i.flavors).filter(([,n]) => n > 0).map(([k,n]) => `${FLAVORS.find(f=>f.key===k)?.labelAr}×${n}`).join('+')
-        return `${i.nameAr}(${flavorLine})`
-      }).join(' · ')
-      await supabase.from('sales').insert({
-        sale_date: new Date().toISOString().split('T')[0],
-        channel: 'أونلاين',
-        items_desc: itemsDesc,
-        total_qty: cartItems.reduce((s,i) => s + i.piecesPerBox, 0),
-        amount: cartTotal,
-        customer_type: 'غريب',
-        customer_name: form.name,
-        customer_phone: form.phone,
-        customer_address: form.address,
-        notes: `order:${num}|cart|${form.notes}`,
-      })
-      try { localStorage.removeItem('jumar_cart') } catch {}
-      const boxLines = cartItems.map(i => {
-        const flavorLine = Object.entries(i.flavors).filter(([,n]) => n > 0).map(([k,n]) => `${FLAVORS.find(f=>f.key===k)?.labelAr} ×${n}`).join(' | ')
-        return `📦 ${i.nameAr} — ${i.price}ج\n   🍬 ${flavorLine}`
-      }).join('\n')
-      const msg = encodeURIComponent(
-        `🛒 طلب جديد ${num}\n👤 ${form.name}\n📱 ${form.phone}\n📍 ${form.address}\n` +
-        boxLines +
-        `\n💰 الإجمالي: ${cartTotal}ج` +
-        (freeDelivery ? '\n🚚 توصيل مجاني' : '') +
-        (form.notes ? `\n📝 ${form.notes}` : '')
-      )
-      window.open(`https://wa.me/201110330052?text=${msg}`, '_blank')
-    } else if (selectedPkg) {
-      const flavorDesc = Object.entries(flavors).filter(([,q]) => q > 0).map(([k, q]) => `${FLAVORS.find(f => f.key === k)?.labelAr} x${q}`).join(' · ')
-      await supabase.from('sales').insert({
-        sale_date: new Date().toISOString().split('T')[0],
-        channel: 'أونلاين',
-        items_desc: `${selectedPkg.label}${selectedPkg.gift > 0 ? ` +${selectedPkg.gift} هدية` : ''} — ${flavorDesc}`,
-        total_qty: selectedPkg.qty + selectedPkg.gift,
-        amount: selectedPkg.price,
-        customer_type: 'غريب',
-        customer_name: form.name,
-        customer_phone: form.phone,
-        customer_address: form.address,
-        notes: `order:${num}|${flavorDesc}|${form.notes}`,
-      })
-      const flavorLine = Object.entries(flavors).filter(([,q]) => q > 0).map(([k, q]) => `${FLAVORS.find(f => f.key === k)?.labelAr} x${q}`).join(' | ')
-      const msg = encodeURIComponent(
-        `🛒 طلب جديد ${num}\n👤 ${form.name}\n📱 ${form.phone}\n📍 ${form.address}\n📦 ${selectedPkg.label} — ${selectedPkg.price}ج\n🍬 ${flavorLine}` +
-        (form.notes ? `\n📝 ${form.notes}` : '')
-      )
-      window.open(`https://wa.me/201110330052?text=${msg}`, '_blank')
-    }
+    await supabase.from('sales').insert({
+      sale_date: new Date().toISOString().split('T')[0],
+      channel: 'أونلاين',
+      items_desc: itemsDesc,
+      total_qty: cartItems.reduce((s,i) => s + i.piecesPerBox + i.gift, 0),
+      amount: cartTotal,
+      customer_type: 'غريب',
+      customer_name: form.name,
+      customer_phone: form.phone,
+      customer_address: form.address,
+      notes: `order:${num}|${form.notes}`,
+    })
 
+    try { localStorage.removeItem('jumar_cart') } catch {}
+
+    const boxLines = cartItems.map(i => {
+      const flavorLine = Object.entries(i.flavors).filter(([,n]) => n > 0)
+        .map(([k,n]) => `${FLAVORS.find(f=>f.key===k)?.labelAr} ×${n}`).join(' | ')
+      return `📦 ${i.nameAr}${i.gift > 0 ? ` +${i.gift} هدية` : ''} — ${i.price}ج\n   🍬 ${flavorLine}`
+    }).join('\n')
+
+    const msg = encodeURIComponent(
+      `🛒 طلب جديد ${num}\n👤 ${form.name}\n📱 ${form.phone}\n📍 ${form.address}\n${boxLines}\n💰 الإجمالي: ${cartTotal}ج` +
+      (freeDelivery ? '\n🚚 توصيل مجاني' : '') +
+      (form.notes ? `\n📝 ${form.notes}` : '')
+    )
+    window.open(`https://wa.me/201110330052?text=${msg}`, '_blank')
     setOrderNum(num)
     setStep('done')
     setLoading(false)
   }
+
+  const stepIndex = { build: 0, details: 1, confirm: 2, done: 3 }
 
   return (
     <div style={{ minHeight: '100vh', background: cream, fontFamily: "'Cairo', 'Segoe UI', sans-serif" }} dir={T.dir}>
@@ -341,117 +337,48 @@ function OrderPageInner() {
 
         {/* Progress */}
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem' }}>
-          {(fromCart ? ['cart','details','confirm'] : ['package','details','confirm']).map((s, i) => {
-            const steps = fromCart ? ['cart','details','confirm','done'] : ['package','details','confirm','done']
-            return <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: steps.indexOf(step) >= i ? gold : 'rgba(201,168,76,0.2)' }} />
-          })}
+          {['build','details','confirm'].map((s, i) => (
+            <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: stepIndex[step as Step] >= i ? gold : 'rgba(201,168,76,0.2)' }} />
+          ))}
         </div>
 
-        {/* ── CART REVIEW ── */}
-        {step === 'cart' && (
+        {/* ── BUILD STEP: pick package + flavors + cart ── */}
+        {step === 'build' && (
           <div>
-            <h1 style={{ color: brown, fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.4rem' }}>{T.cartTitle}</h1>
-            <p style={{ color: '#7A5C3A', fontSize: '0.85rem', marginBottom: '1.5rem' }}>{T.cartSub}</p>
-            {cartItems.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '3rem 0' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🛒</div>
-                <p style={{ color: '#7A5C3A' }}>{T.emptyCart}</p>
-                <Link href="/" style={{ display: 'inline-block', marginTop: '1rem', color: gold, fontWeight: 700, textDecoration: 'none' }}>{T.backToMenu}</Link>
-              </div>
-            ) : (
-              <>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
-                  {cartItems.map(item => (
-                    <div key={item.key} style={{ background: '#fff', borderRadius: '1rem', padding: '1rem', border: '1px solid rgba(201,168,76,0.2)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.6rem' }}>
-                        <div>
-                          <p style={{ fontWeight: 700, color: brown, fontSize: '0.9rem', margin: 0 }}>{cartItemName(item)}</p>
-                          <p style={{ color: '#7A5C3A', fontSize: '0.72rem', margin: '0.1rem 0 0' }}>{item.piecesPerBox} {T.pieces}</p>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ color: gold, fontWeight: 900, fontSize: '0.95rem' }}>{item.price} {T.currency}</span>
-                          <button onClick={() => removeCartItem(item.key)} style={{ background: 'rgba(200,0,0,0.07)', border: 'none', color: '#c00', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗑</button>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
-                        {Object.entries(item.flavors).filter(([,n]) => n > 0).map(([k,n]) => {
-                          const f = FLAVORS.find(f => f.key === k)
-                          return f ? (
-                            <span key={k} style={{ background: 'rgba(201,168,76,0.1)', color: '#5C3D1E', fontSize: '0.68rem', fontWeight: 600, padding: '0.15rem 0.45rem', borderRadius: '1rem', border: '1px solid rgba(201,168,76,0.2)' }}>
-                              {flavorLabel(f, lang)} ×{n}
-                            </span>
-                          ) : null
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ background: '#fff', borderRadius: '1rem', padding: '1rem', border: '1px solid rgba(201,168,76,0.2)', marginBottom: '1.25rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span style={{ color: brown, fontWeight: 700 }}>{T.total} ({cartCount} {T.boxes})</span>
-                    <span style={{ color: gold, fontWeight: 900, fontSize: '1.1rem' }}>{cartTotal} {T.currency}</span>
-                  </div>
-                  <p style={{ fontSize: '0.78rem', padding: '0.4rem 0.6rem', borderRadius: '0.5rem', margin: 0, background: freeDelivery ? 'rgba(0,180,0,0.08)' : 'rgba(201,168,76,0.1)', color: freeDelivery ? '#2A7A2A' : '#7A5C3A' }}>
-                    {freeDelivery ? T.freeDelivery : T.addForFree(1500 - cartTotal)}
-                  </p>
-                </div>
-                <button onClick={() => setStep('details')} style={{ width: '100%', background: brown, color: gold, border: 'none', borderRadius: '2rem', padding: '0.9rem', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  {T.continueOrder}
-                </button>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ── STEP 1: Choose package ── */}
-        {step === 'package' && (
-          <div>
-            <h1 style={{ color: brown, fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.4rem' }}>{T.choosePackage}</h1>
-            <p style={{ color: '#7A5C3A', fontSize: '0.85rem', marginBottom: '1.5rem' }}>{T.packageSub}</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {/* Package selector */}
+            <h1 style={{ color: brown, fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.4rem' }}>{T.choosePackage}</h1>
+            <p style={{ color: '#7A5C3A', fontSize: '0.82rem', marginBottom: '1rem' }}>{T.packageSub}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.25rem' }}>
               {T.PACKAGES.map(pkg => (
-                <button key={pkg.label} onClick={() => setSelectedPkg(pkg)}
+                <button key={pkg.label} onClick={() => { setSelectedPkg(pkg); setFlavors({}) }}
                   style={{
                     border: `2px solid ${selectedPkg?.qty === pkg.qty ? gold : 'rgba(201,168,76,0.25)'}`,
                     background: selectedPkg?.qty === pkg.qty ? 'rgba(201,168,76,0.08)' : '#fff',
-                    borderRadius: '1rem', padding: '1rem 1.25rem',
+                    borderRadius: '1rem', padding: '0.85rem 1.25rem',
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     cursor: 'pointer', transition: 'all 0.15s', textAlign: lang === 'ar' ? 'right' : 'left',
                     position: 'relative',
                   }}>
                   {'popular' in pkg && pkg.popular && (
-                    <span style={{ position: 'absolute', top: -10, right: 16, background: gold, color: brown, fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.6rem', borderRadius: '1rem' }}>{T.popular}</span>
+                    <span style={{ position: 'absolute', top: -10, right: 16, background: gold, color: brown, fontSize: '0.62rem', fontWeight: 700, padding: '0.15rem 0.6rem', borderRadius: '1rem' }}>{T.popular}</span>
                   )}
                   <div>
-                    <p style={{ fontWeight: 700, color: brown, fontSize: '1rem', margin: 0 }}>{pkg.label}</p>
-                    {pkg.gift > 0 && <p style={{ color: gold, fontSize: '0.78rem', margin: '0.1rem 0 0' }}>{T.giftLabel(pkg.gift)}</p>}
+                    <p style={{ fontWeight: 700, color: brown, fontSize: '0.95rem', margin: 0 }}>{pkg.label}</p>
+                    {pkg.gift > 0 && <p style={{ color: gold, fontSize: '0.75rem', margin: '0.1rem 0 0' }}>{T.giftLabel(pkg.gift)}</p>}
                   </div>
-                  <p style={{ fontWeight: 800, color: gold, fontSize: '1.3rem', margin: 0 }}>{pkg.price}<span style={{ fontSize: '0.75rem', color: '#7A5C3A' }}> {T.currency}</span></p>
+                  <p style={{ fontWeight: 800, color: gold, fontSize: '1.2rem', margin: 0 }}>{pkg.price}<span style={{ fontSize: '0.72rem', color: '#7A5C3A' }}> {T.currency}</span></p>
                 </button>
               ))}
             </div>
-            <button onClick={() => selectedPkg && setStep('details')}
-              disabled={!selectedPkg}
-              style={{ width: '100%', marginTop: '1.5rem', background: selectedPkg ? brown : '#ccc', color: gold, border: 'none', borderRadius: '2rem', padding: '0.9rem', fontWeight: 700, fontSize: '1rem', cursor: selectedPkg ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
-              {T.nextFlavors}
-            </button>
-          </div>
-        )}
 
-        {/* ── STEP 2: Details ── */}
-        {step === 'details' && (
-          <div>
-            <h1 style={{ color: brown, fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem' }}>{T.detailsTitle}</h1>
-            {!fromCart && selectedPkg && (
-              <p style={{ color: '#7A5C3A', fontSize: '0.85rem', marginBottom: '1rem' }}>{T.distributeSub(selectedPkg.qty)}</p>
-            )}
-            {!fromCart && selectedPkg && (
-              <div style={{ background: '#fff', borderRadius: '1rem', padding: '1rem', marginBottom: '1rem', border: '1px solid rgba(201,168,76,0.2)' }}>
+            {/* Flavor picker — shows only when package selected */}
+            {selectedPkg && (
+              <div style={{ background: '#fff', borderRadius: '1rem', padding: '1rem', marginBottom: '1rem', border: `2px solid ${gold}` }}>
                 <p style={{ fontWeight: 700, color: brown, marginBottom: '0.75rem', fontSize: '0.9rem' }}>
-                  {T.flavorsLabel} <span style={{ color: remainingFlavors < 0 ? 'red' : gold }}>{remainingFlavors}</span>
+                  {T.chooseFlavors} — <span style={{ color: remainingFlavors < 0 ? 'red' : gold }}>{T.flavorsLabel} {remainingFlavors}</span>
                 </p>
                 {FLAVORS.map(f => (
-                  <div key={f.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                  <div key={f.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.45rem 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                     <span style={{ fontSize: '0.88rem', color: brown }}>{flavorLabel(f, lang)}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <button onClick={() => setFlavor(f.key, (flavors[f.key] || 0) - 1)} style={{ width: 28, height: 28, border: `1.5px solid ${gold}`, borderRadius: '50%', background: 'transparent', color: brown, fontWeight: 700, cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
@@ -460,10 +387,62 @@ function OrderPageInner() {
                     </div>
                   </div>
                 ))}
+                <button
+                  onClick={addToCart}
+                  disabled={remainingFlavors !== 0}
+                  style={{ width: '100%', marginTop: '1rem', background: remainingFlavors === 0 ? brown : '#ccc', color: gold, border: 'none', borderRadius: '2rem', padding: '0.8rem', fontWeight: 700, fontSize: '0.95rem', cursor: remainingFlavors === 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+                  {T.addToCart}
+                </button>
               </div>
             )}
 
-            <div style={{ marginTop: '0.5rem' }}>
+            {/* Cart summary */}
+            {cartItems.length > 0 && (
+              <div style={{ background: '#fff', borderRadius: '1rem', padding: '1rem', border: '1px solid rgba(201,168,76,0.25)', marginBottom: '1rem' }}>
+                <p style={{ fontWeight: 700, color: brown, fontSize: '0.9rem', marginBottom: '0.75rem' }}>{T.cartTitle}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '0.75rem' }}>
+                  {cartItems.map(item => (
+                    <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <p style={{ fontWeight: 700, color: brown, fontSize: '0.85rem', margin: 0 }}>{cartItemName(item)}{item.gift > 0 ? ` +${item.gift} هدية` : ''}</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.2rem', marginTop: '0.2rem' }}>
+                          {Object.entries(item.flavors).filter(([,n]) => n > 0).map(([k,n]) => {
+                            const f = FLAVORS.find(f => f.key === k)
+                            return f ? <span key={k} style={{ background: 'rgba(201,168,76,0.1)', color: '#5C3D1E', fontSize: '0.65rem', fontWeight: 600, padding: '0.1rem 0.35rem', borderRadius: '1rem' }}>{flavorLabel(f, lang)} ×{n}</span> : null
+                          })}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                        <span style={{ color: gold, fontWeight: 800, fontSize: '0.9rem' }}>{item.price} {T.currency}</span>
+                        <button onClick={() => removeCartItem(item.key)} style={{ background: 'rgba(200,0,0,0.07)', border: 'none', color: '#c00', width: 24, height: 24, borderRadius: '50%', cursor: 'pointer', fontSize: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗑</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ borderTop: '1px solid rgba(201,168,76,0.15)', paddingTop: '0.6rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ color: brown, fontWeight: 700, fontSize: '0.88rem' }}>{T.total} ({cartItems.length} {T.boxes})</span>
+                  <span style={{ color: gold, fontWeight: 900, fontSize: '1.1rem' }}>{cartTotal} {T.currency}</span>
+                </div>
+                <p style={{ fontSize: '0.75rem', padding: '0.35rem 0.6rem', borderRadius: '0.5rem', margin: '0 0 0.75rem', background: freeDelivery ? 'rgba(0,180,0,0.08)' : 'rgba(201,168,76,0.1)', color: freeDelivery ? '#2A7A2A' : '#7A5C3A' }}>
+                  {freeDelivery ? T.freeDelivery : T.addForFree(1500 - cartTotal)}
+                </p>
+                <button onClick={() => setStep('details')} style={{ width: '100%', background: brown, color: gold, border: 'none', borderRadius: '2rem', padding: '0.85rem', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  {T.continueOrder}
+                </button>
+              </div>
+            )}
+
+            {cartItems.length === 0 && !selectedPkg && (
+              <p style={{ textAlign: 'center', color: '#9A7C5A', fontSize: '0.82rem', marginTop: '0.5rem' }}>{T.emptyCart}</p>
+            )}
+          </div>
+        )}
+
+        {/* ── DETAILS STEP ── */}
+        {step === 'details' && (
+          <div>
+            <h1 style={{ color: brown, fontSize: '1.4rem', fontWeight: 700, marginBottom: '1rem' }}>{T.detailsTitle}</h1>
+            <div>
               {[
                 { key: 'name', label: T.nameLabel, placeholder: T.namePlaceholder, type: 'text' },
                 { key: 'phone', label: T.phoneLabel, placeholder: T.phonePlaceholder, type: 'tel' },
@@ -478,29 +457,27 @@ function OrderPageInner() {
                 </div>
               ))}
             </div>
-
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-              <button onClick={() => setStep(fromCart ? 'cart' : 'package')} style={{ flex: 1, background: 'transparent', border: `1.5px solid ${gold}`, color: brown, borderRadius: '2rem', padding: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{T.back}</button>
+              <button onClick={() => setStep('build')} style={{ flex: 1, background: 'transparent', border: `1.5px solid ${gold}`, color: brown, borderRadius: '2rem', padding: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{T.back}</button>
               <button
                 onClick={() => setStep('confirm')}
-                disabled={(!fromCart && remainingFlavors !== 0) || !form.name || !form.phone || !form.address}
-                style={{ flex: 2, background: (fromCart || remainingFlavors === 0) && form.name && form.phone && form.address ? brown : '#ccc', color: gold, border: 'none', borderRadius: '2rem', padding: '0.8rem', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                disabled={!form.name || !form.phone || !form.address}
+                style={{ flex: 2, background: form.name && form.phone && form.address ? brown : '#ccc', color: gold, border: 'none', borderRadius: '2rem', padding: '0.8rem', fontWeight: 700, fontSize: '0.95rem', cursor: form.name && form.phone && form.address ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
                 {T.reviewOrder}
               </button>
             </div>
           </div>
         )}
 
-        {/* ── STEP 3: Confirm ── */}
+        {/* ── CONFIRM STEP ── */}
         {step === 'confirm' && (
           <div>
-            <h1 style={{ color: brown, fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem' }}>{T.confirmTitle}</h1>
-
+            <h1 style={{ color: brown, fontSize: '1.4rem', fontWeight: 700, marginBottom: '1.5rem' }}>{T.confirmTitle}</h1>
             <div style={{ background: '#fff', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(201,168,76,0.2)', marginBottom: '1rem' }}>
               <p style={{ fontWeight: 700, color: brown, marginBottom: '0.75rem' }}>{T.productsLabel}</p>
-              {fromCart ? cartItems.map(i => (
+              {cartItems.map(i => (
                 <div key={i.key} style={{ marginBottom: '0.75rem' }}>
-                  <p style={{ color: brown, fontSize: '0.88rem', fontWeight: 700, margin: 0 }}>{cartItemName(i)} — {i.price} {T.currency}</p>
+                  <p style={{ color: brown, fontSize: '0.88rem', fontWeight: 700, margin: 0 }}>{cartItemName(i)}{i.gift > 0 ? T.giftSuffix(i.gift) : ''} — {i.price} {T.currency}</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.3rem' }}>
                     {Object.entries(i.flavors).filter(([,n]) => n > 0).map(([k,n]) => {
                       const f = FLAVORS.find(f => f.key === k)
@@ -508,21 +485,12 @@ function OrderPageInner() {
                     })}
                   </div>
                 </div>
-              )) : selectedPkg && (
-                <>
-                  <p style={{ color: '#555', fontSize: '0.9rem' }}>{selectedPkg.label}{selectedPkg.gift > 0 ? T.giftSuffix(selectedPkg.gift) : ''}</p>
-                  {Object.entries(flavors).filter(([,q]) => q > 0).map(([k, q]) => {
-                    const f = FLAVORS.find(f => f.key === k)
-                    return f ? <p key={k} style={{ color: '#555', fontSize: '0.88rem', margin: '0.2rem 0' }}>{flavorLabel(f, lang)} × {q}</p> : null
-                  })}
-                </>
-              )}
+              ))}
               <p style={{ color: gold, fontWeight: 800, fontSize: '1.2rem', marginTop: '0.75rem' }}>
-                {fromCart ? cartTotal : selectedPkg?.price} {T.currency}
-                {fromCart && freeDelivery && <span style={{ fontSize: '0.78rem', color: '#2A7A2A', marginInlineStart: '0.5rem' }}>{T.freeDeliveryBadge}</span>}
+                {cartTotal} {T.currency}
+                {freeDelivery && <span style={{ fontSize: '0.78rem', color: '#2A7A2A', marginInlineStart: '0.5rem' }}>{T.freeDeliveryBadge}</span>}
               </p>
             </div>
-
             <div style={{ background: '#fff', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(201,168,76,0.2)', marginBottom: '1.5rem' }}>
               <p style={{ fontWeight: 700, color: brown, marginBottom: '0.75rem' }}>{T.deliveryLabel}</p>
               <p style={{ color: '#555', fontSize: '0.88rem', margin: '0.2rem 0' }}>👤 {form.name}</p>
@@ -531,7 +499,6 @@ function OrderPageInner() {
               {form.notes && <p style={{ color: '#555', fontSize: '0.88rem', margin: '0.2rem 0' }}>📝 {form.notes}</p>}
               <p style={{ color: '#7A5C3A', fontSize: '0.78rem', marginTop: '0.5rem' }}>{T.deliveryTime}</p>
             </div>
-
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button onClick={() => setStep('details')} style={{ flex: 1, background: 'transparent', border: `1.5px solid ${gold}`, color: brown, borderRadius: '2rem', padding: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{T.edit}</button>
               <button onClick={submitOrder} disabled={loading}
@@ -542,15 +509,13 @@ function OrderPageInner() {
           </div>
         )}
 
-        {/* ── STEP 4: Done ── */}
+        {/* ── DONE STEP ── */}
         {step === 'done' && (
           <div style={{ textAlign: 'center', paddingTop: '2rem' }}>
             <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
             <h1 style={{ color: brown, fontSize: '1.6rem', fontWeight: 700, marginBottom: '0.5rem' }}>{T.doneTitle}</h1>
             <p style={{ color: '#7A5C3A', fontSize: '0.9rem', marginBottom: '0.5rem' }}>{T.orderNum} <strong style={{ color: gold }}>{orderNum}</strong></p>
-            <p style={{ color: '#7A5C3A', fontSize: '0.88rem', lineHeight: 1.7, marginBottom: '2rem' }}>
-              {T.doneSub(form.phone)}
-            </p>
+            <p style={{ color: '#7A5C3A', fontSize: '0.88rem', lineHeight: 1.7, marginBottom: '2rem' }}>{T.doneSub(form.phone)}</p>
             <a href={`https://wa.me/201110330052?text=طلبي رقم ${orderNum} — ${form.name}`}
               target="_blank" rel="noopener noreferrer"
               style={{ display: 'block', background: '#25D366', color: '#fff', borderRadius: '2rem', padding: '0.9rem 1.5rem', fontWeight: 700, textDecoration: 'none', marginBottom: '0.75rem', fontSize: '0.95rem' }}>
