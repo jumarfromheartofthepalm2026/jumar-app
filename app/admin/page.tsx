@@ -1030,7 +1030,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                       <p className="text-xs text-gray-400 mb-1">{ar ? 'هامش ربح العلب:' : 'Box margins:'}</p>
                       <div className="grid grid-cols-3 gap-1">
                         {BOX_SIZES.map(({ label, pieces }) => {
-                          const boxSale = pieces === 8 ? 260 : pieces === 15 ? 450 : 650
+                          const boxSale = pieces === 2 ? 70 : pieces === 5 ? 170 : pieces === 8 ? 260 : pieces === 15 ? 450 : 650
                           const boxCost = totalCost * pieces
                           const boxMargin = boxSale > 0 ? ((boxSale - boxCost) / boxSale * 100) : 0
                           return (
