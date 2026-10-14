@@ -731,7 +731,7 @@ function InventoryTab({ lang }: { lang: Lang }) {
 // ══════════════════════════════════════════════════════════════════════════════
 // FINANCE TAB
 // ══════════════════════════════════════════════════════════════════════════════
-type Bazaar = { id: string; name: string; location: string; start_date: string; end_date: string; fixed_cost: number; qty_sold: number; notes: string }
+type Bazaar = { id: string; name: string; location: string; start_date: string; end_date: string; fixed_cost: number; qty_sold: number; revenue_actual: number; notes: string }
 
 function FinanceTab({ lang }: { lang: Lang }) {
   const ar = lang === 'ar'
@@ -1309,7 +1309,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
             <p className="text-xs text-gray-400 px-1">{ar ? 'ROI ونتيجة كل بازار بشكل منفصل' : 'ROI and result per bazaar'}</p>
             {bazaars.map(b => {
               const bSales = sales.filter(s => s.sale_date >= b.start_date && s.sale_date <= b.end_date && s.channel === 'بازار')
-              const revenue = bSales.reduce((s, r) => s + Number(r.amount), 0)
+              const revenue = b.revenue_actual || bSales.reduce((s, r) => s + Number(r.amount), 0)
               const avgCOGS = (() => {
                 const products = Object.entries(RECIPES).filter(([n]) => n !== 'سنيكرز البندق')
                 const costs = products.map(([, recipe]) => Object.entries(recipe).reduce((sum, [ing, g]) => {
