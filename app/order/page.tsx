@@ -272,22 +272,57 @@ function OrderPageInner() {
   async function submitOrder() {
     setLoading(true)
     const num = `JM-${Date.now().toString().slice(-6)}`
+    const today = new Date().toISOString().split('T')[0]
+
+    // 1. upsert customer by phone
+    const phone = form.phone.replace(/\D/g, '')
+    const { data: custData } = await supabase
+      .from('customers')
+      .upsert({ phone, name: form.name, address: form.address, area: '' }, { onConflict: 'phone' })
+      .select('id').single()
+    const customerId = custData?.id
+
+    // 2. insert order
     const itemsDesc = cartItems.map(i => {
       const flavorLine = Object.entries(i.flavors).filter(([,n]) => n > 0)
         .map(([k,n]) => `${FLAVORS.find(f=>f.key===k)?.labelAr}×${n}`).join('+')
       return `${i.nameAr}${i.gift > 0 ? `+${i.gift}هدية` : ''}(${flavorLine})`
     }).join(' · ')
 
+    const { data: orderData } = await supabase.from('orders').insert({
+      order_number: num,
+      customer_id: customerId || null,
+      status: 'pending',
+      total_price: cartTotal,
+      delivery_address: form.address,
+      notes: form.notes || null,
+      channel: 'أونلاين',
+      sale_date: today,
+    }).select('id').single()
+
+    // 3. insert order_items
+    if (orderData?.id) {
+      const items = cartItems.map(i => ({
+        order_id: orderData.id,
+        product_name: i.nameAr,
+        box_size: i.piecesPerBox,
+        gift_qty: i.gift,
+        price: i.price,
+        flavors: i.flavors,
+        items_desc: Object.entries(i.flavors).filter(([,n]) => n > 0)
+          .map(([k,n]) => `${FLAVORS.find(f=>f.key===k)?.labelAr}×${n}`).join('+'),
+      }))
+      await supabase.from('order_items').insert(items)
+    }
+
+    // 4. also log in sales for revenue tracking
     await supabase.from('sales').insert({
-      sale_date: new Date().toISOString().split('T')[0],
+      sale_date: today,
       channel: 'أونلاين',
       items_desc: itemsDesc,
       total_qty: cartItems.reduce((s,i) => s + i.piecesPerBox + i.gift, 0),
       amount: cartTotal,
       customer_type: 'غريب',
-      customer_name: form.name,
-      customer_phone: form.phone,
-      customer_address: form.address,
       notes: `order:${num}|${form.notes}`,
     })
 
