@@ -336,7 +336,11 @@ function OrdersTab({ lang }: { lang: Lang }) {
                     if (!confirm(ar ? 'مسح الطلب ده نهائياً؟' : 'Delete this order permanently?')) return
                     await supabase.from('order_items').delete().eq('order_id', order.id)
                     await supabase.from('orders').delete().eq('id', order.id)
+                    if (order.order_number) {
+                      await supabase.from('sales').delete().like('notes', `order:${order.order_number}|%`)
+                    }
                     fetchOrders()
+                    fetchSales()
                   }}
                   className="text-xs px-3 py-1.5 rounded-full bg-red-50 text-red-500 hover:bg-red-100 font-semibold transition-all whitespace-nowrap"
                 >
