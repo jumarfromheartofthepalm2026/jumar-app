@@ -1599,10 +1599,34 @@ function BazaarTab({ lang }: { lang: Lang }) {
           </div>
         </div>
       </div>
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-center">
-        <p className="text-sm text-amber-800 font-semibold">🎯 {ar ? 'الهدف: 198 قطعة مباعة (66/يوم) للـ break-even' : 'Goal: 198 pieces sold (66/day) to break-even'}</p>
-        <p className="text-xs text-amber-600 mt-1">{ar ? `وصلت: ${grandSold} من 198 (${Math.round(grandSold/198*100)}%)` : `Reached: ${grandSold} of 198 (${Math.round(grandSold/198*100)}%)`}</p>
-      </div>
+      {(() => {
+        // حساب متوسط تكلفة القطعة من الوصفات والأسعار
+        const avgCostPerPiece = (() => {
+          const products = Object.values(RECIPES)
+          const costs = products.map(recipe =>
+            Object.entries(recipe).reduce((sum, [ing, grams]) => {
+              const found = DEFAULT_INGREDIENTS.find(i => i.name === ing)
+              return sum + (found ? found.cost_per_gram * grams : 0)
+            }, 0) + PACKAGING_COST_PER_PIECE
+          )
+          return costs.reduce((a, b) => a + b, 0) / costs.length
+        })()
+        // متوسط سعر البيع من BAZAAR_ITEMS (weighted by qty)
+        const totalQty = BAZAAR_ITEMS.reduce((s, i) => s + i.qty, 0)
+        const avgSalePrice = BAZAAR_ITEMS.reduce((s, i) => s + (i.price / Math.max(i.qty,1)) * i.qty, 0) / totalQty
+        const margin = avgSalePrice - avgCostPerPiece
+        const BAZAAR_FIXED = 3650
+        const breakEven = margin > 0 ? Math.ceil(BAZAAR_FIXED / margin) : 0
+        const perDay = Math.ceil(breakEven / 3)
+        const pct = breakEven > 0 ? Math.min(100, Math.round(grandSold / breakEven * 100)) : 0
+        return (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-center">
+            <p className="text-sm text-amber-800 font-semibold">🎯 {ar ? `الهدف: ${breakEven} قطعة (${perDay}/يوم) للـ break-even` : `Goal: ${breakEven} pcs (${perDay}/day) to break-even`}</p>
+            <p className="text-xs text-amber-600 mt-1">{ar ? `وصلت: ${grandSold} من ${breakEven} (${pct}%)` : `Reached: ${grandSold} of ${breakEven} (${pct}%)`}</p>
+            <p className="text-xs text-amber-500 mt-0.5">{ar ? `هامش/قطعة: ${margin.toFixed(1)} ج · رسوم البازار: ${BAZAAR_FIXED} ج` : `Margin/pc: ${margin.toFixed(1)} EGP · Fixed: ${BAZAAR_FIXED} EGP`}</p>
+          </div>
+        )
+      })()}
     </div>
   )
 }
