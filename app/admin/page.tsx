@@ -1456,7 +1456,6 @@ function BazaarTab({ lang }: { lang: Lang }) {
       return { date, total: rows.reduce((s, r) => s + Number(r.amount), 0), count: rows.length, soldQty, giftQty }
     })
     setDaySummaries(summaries)
-    const cur = activeDay || today
     const todayData = summaries.find(s => s.date === cur)
     setTodayTotal(todayData?.total || 0); setTodayCount(todayData?.count || 0)
     setTodaySold(todayData?.soldQty || 0); setTodayGifts(todayData?.giftQty || 0)
