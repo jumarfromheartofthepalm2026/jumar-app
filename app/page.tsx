@@ -1016,7 +1016,7 @@ export default function HomePage() {
         <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(2rem,5vw,3rem)', color: '#C9A84C', marginBottom: '1rem' }}>{T.ctaTitle}</h2>
         <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1rem', marginBottom: '2rem' }}>{T.ctaSub}</p>
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button onClick={() => setCartOpen(true)} style={{ ...btnPrimaryStyle, background: '#C9A84C', color: '#3D2310', border: 'none', cursor: 'pointer' }}>{T.ctaBtn}</button>
+          <Link href="/order" style={{ ...btnPrimaryStyle, background: '#C9A84C', color: '#3D2310', textDecoration: 'none' }}>{T.ctaBtn}</Link>
           <a href="https://wa.me/201110330052" target="_blank" rel="noopener noreferrer" style={{ ...btnSecondaryStyle, borderColor: 'rgba(201,168,76,0.4)', color: '#C9A84C' }}>
             💬 {T.ctaWa}
           </a>
