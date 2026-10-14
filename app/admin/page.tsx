@@ -30,10 +30,10 @@ const PACKAGING_COST_PER_PIECE = 1.5 // جنيه/قطعة تكلفة تغليف
 // وصفة كل علبة: كمية كل خامة بالجرام للقطعة الواحدة (22 جرام)
 const RECIPES: Record<string, Record<string, number>> = {
   'تمرية الطحينة': { 'تمر مجدول': 17, 'طحينة': 1, 'فول سوداني': 3, 'سمسم': 1 },
-  'سلطانة الفستق':  { 'تمر مجدول': 16, 'فستق': 5, 'جوز هند': 1 },
-  'فدج الكاجو':     { 'تمر مجدول': 14, 'كاجو': 6, 'زبدة': 2 },
-  'سنيكرز الفول':   { 'تمر عادي': 12, 'فول سوداني': 6, 'شوكولاتة دارك': 4 },
-  'سنيكرز البندق':  { 'تمر عادي': 12, 'بندق': 6, 'شوكولاتة دارك': 4 },
+  'سلطانة الفستق':  { 'تمر مجدول': 18, 'فستق': 4 },
+  'فدج الكاجو':     { 'تمر مجدول': 17, 'كاجو': 5, 'زبدة': 1 },
+  'سنيكرز الفول':   { 'تمر مجدول': 16, 'فول سوداني': 3, 'شوكولاتة دارك': 3 },
+  'سنيكرز البندق':  { 'تمر مجدول': 16, 'بندق': 3, 'شوكولاتة دارك': 3 },
 }
 
 // أحجام العلب
@@ -46,10 +46,10 @@ const BOX_SIZES = [
 ]
 
 const DEFAULT_INGREDIENTS = [
-  { name: 'تمر مجدول', min_stock: 500, cost_per_gram: 0.221 },
+  { name: 'تمر مجدول', min_stock: 500, cost_per_gram: 0.20 },
   { name: 'تمر عادي', min_stock: 500, cost_per_gram: 0.139 },
-  { name: 'كاجو', min_stock: 200, cost_per_gram: 0.9 },
-  { name: 'فستق', min_stock: 200, cost_per_gram: 1.347 },
+  { name: 'كاجو', min_stock: 200, cost_per_gram: 0.70 },
+  { name: 'فستق', min_stock: 200, cost_per_gram: 1.60 },
   { name: 'بندق', min_stock: 200, cost_per_gram: 1.4 },
   { name: 'فول سوداني', min_stock: 200, cost_per_gram: 0.18 },
   { name: 'طحينة', min_stock: 100, cost_per_gram: 0.333 },
@@ -1037,7 +1037,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
             {Object.keys(RECIPES).map(product => {
               const rawCost = cogPerPiece(product)
               const totalCost = rawCost + PACKAGING_COST_PER_PIECE
-              const salePrice = 40 // 40 ج للقطعة
+              const salePrice = 35 // 35 ج متوسط واقعي للقطعة (مزيج علب)
               const margin = salePrice > 0 ? ((salePrice - totalCost) / salePrice * 100) : 0
               const recipe = RECIPES[product]
               return (
