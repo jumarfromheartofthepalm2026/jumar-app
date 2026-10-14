@@ -731,15 +731,18 @@ function InventoryTab({ lang }: { lang: Lang }) {
 // ══════════════════════════════════════════════════════════════════════════════
 // FINANCE TAB
 // ══════════════════════════════════════════════════════════════════════════════
+type Bazaar = { id: string; name: string; location: string; start_date: string; end_date: string; fixed_cost: number; notes: string }
+
 function FinanceTab({ lang }: { lang: Lang }) {
   const ar = lang === 'ar'
-  const [tab, setTab] = useState<'overview'|'pl'|'cogs'|'inventory_turn'|'channels'|'customers'|'bazaar_roi'|'cashflow'|'sales'|'expenses'>('overview')
+  const [tab, setTab] = useState<'overview'|'pl'|'cogs'|'inventory_turn'|'channels'|'customers'|'bazaar_roi'|'past_bazaars'|'cashflow'|'sales'|'expenses'>('overview')
   const [kpis, setKpis] = useState<KPIs | null>(null)
   const [monthlyData, setMonthlyData] = useState<MonthRow[]>([])
   const [sales, setSales] = useState<Sale[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
   const [orders, setOrders] = useState<Order[]>([])
+  const [bazaars, setBazaars] = useState<Bazaar[]>([])
   const [loading, setLoading] = useState(true)
   const [saleForm, setSaleForm] = useState({ sale_date: new Date().toISOString().split('T')[0], channel: 'بازار', items_desc: '', qty_tamriya: 0, qty_fudge: 0, qty_sultana: 0, qty_snickers_fool: 0, qty_snickers_bunduq: 0, amount: '', customer_type: 'غريب', notes: '' })
   const [expenseForm, setExpenseForm] = useState({ expense_date: new Date().toISOString().split('T')[0], category: 'خامات', description: '', amount: '', notes: '' })
@@ -748,16 +751,18 @@ function FinanceTab({ lang }: { lang: Lang }) {
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    const [{ data: salesData }, { data: expensesData }, { data: ingData }, { data: ordersData }] = await Promise.all([
+    const [{ data: salesData }, { data: expensesData }, { data: ingData }, { data: ordersData }, { data: bazaarsData }] = await Promise.all([
       supabase.from('sales').select('*').order('sale_date', { ascending: false }),
       supabase.from('expenses').select('*').order('expense_date', { ascending: false }),
       supabase.from('ingredients').select('*').order('name'),
       supabase.from('orders').select('*, customers(name, area, phone), order_items(product_name, quantity)').order('created_at', { ascending: false }),
+      supabase.from('bazaars').select('*').order('start_date', { ascending: false }),
     ])
     if (salesData) setSales(salesData)
     if (expensesData) setExpenses(expensesData)
     if (ingData) setIngredients(ingData)
     if (ordersData) setOrders(ordersData)
+    if (bazaarsData) setBazaars(bazaarsData)
 
     const totalRevenue = (salesData || []).reduce((s: number, r: Sale) => s + Number(r.amount), 0)
     const totalExpenses = (expensesData || []).reduce((s: number, r: Expense) => s + Number(r.amount), 0)
@@ -885,6 +890,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
     ['channels', ar ? '📡 القنوات'    : '📡 Channels'],
     ['customers',ar ? '👥 العملاء'    : '👥 Customers'],
     ['bazaar_roi',ar ? '🏪 ROI بازار' : '🏪 Bazaar ROI'],
+    ['past_bazaars', ar ? '📊 بازارات سابقة' : '📊 Past Bazaars'],
     ['cashflow', ar ? '💵 تدفق نقدي'  : '💵 Cash Flow'],
     ['sales',    ar ? '🛍️ بيعة'       : '🛍️ Add Sale'],
     ['expenses', ar ? '🧾 مصروف'      : '🧾 Add Expense'],
@@ -1294,6 +1300,59 @@ function FinanceTab({ lang }: { lang: Lang }) {
                 {ar ? <>💡 سجّل رسوم البازار في المصروفات تحت فئة <strong>"رسوم بازار"</strong> عشان يتحسب الـ ROI صح</> : <>💡 Record bazaar fees under <strong>"رسوم بازار"</strong> category in expenses to calculate ROI correctly</>}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── البازارات السابقة ── */}
+        {tab === 'past_bazaars' && (
+          <div className="space-y-3">
+            <p className="text-xs text-gray-400 px-1">{ar ? 'ROI ونتيجة كل بازار بشكل منفصل' : 'ROI and result per bazaar'}</p>
+            {bazaars.map(b => {
+              const bSales = sales.filter(s => s.sale_date >= b.start_date && s.sale_date <= b.end_date && s.channel === 'بازار')
+              const revenue = bSales.reduce((s, r) => s + Number(r.amount), 0)
+              const avgCOGS = (() => {
+                const products = Object.entries(RECIPES).filter(([n]) => n !== 'سنيكرز البندق')
+                const costs = products.map(([, recipe]) => Object.entries(recipe).reduce((s, [ing, g]) => {
+                  const found = ingredients.find(i => i.name === ing)
+                  return s + (found ? found.cost_per_gram * g : DEFAULT_INGREDIENTS.find(i => i.name === ing)?.cost_per_gram ?? 0) * g
+                }, 0) + PACKAGING_COST_PER_PIECE)
+                return costs.length ? costs.reduce((a, x) => a + x, 0) / costs.length : 8.8
+              })()
+              const estQty = revenue > 0 ? Math.round(revenue / 35) : 0
+              const cogs = estQty * avgCOGS
+              const netProfit = revenue - b.fixed_cost - cogs
+              const roi = b.fixed_cost > 0 ? (netProfit / b.fixed_cost) * 100 : null
+              const days = Math.round((new Date(b.end_date).getTime() - new Date(b.start_date).getTime()) / 86400000) + 1
+              return (
+                <div key={b.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                  <div className={`px-4 py-3 flex justify-between items-center ${netProfit >= 0 ? 'bg-jumar-brown' : 'bg-red-600'}`}>
+                    <div>
+                      <p className="font-bold text-white">{b.name}</p>
+                      <p className="text-xs text-white/60">{b.location} · {days} {ar ? 'أيام' : 'days'}</p>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-2xl font-bold text-jumar-gold">{roi !== null ? `${roi.toFixed(0)}%` : '—'}</p>
+                      <p className="text-xs text-white/60">ROI</p>
+                    </div>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {[
+                      { label: ar ? 'الإيراد' : 'Revenue', value: `+${fmt(revenue)} ${cur}`, color: 'text-green-600' },
+                      { label: ar ? 'رسوم ثابتة' : 'Fixed Cost', value: `-${fmt(b.fixed_cost)} ${cur}`, color: 'text-red-500' },
+                      { label: ar ? 'تكلفة بضاعة (تقديري)' : 'COGS (est.)', value: `-${fmt(cogs)} ${cur}`, color: 'text-orange-500' },
+                      { label: ar ? 'صافي الربح' : 'Net Profit', value: `${netProfit >= 0 ? '+' : ''}${fmt(netProfit)} ${cur}`, color: netProfit >= 0 ? 'text-green-600 font-bold' : 'text-red-500 font-bold' },
+                    ].map((row, i) => (
+                      <div key={i} className="flex justify-between px-4 py-2 text-sm">
+                        <span className="text-gray-500">{row.label}</span>
+                        <span className={row.color}>{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {b.notes && <p className="text-xs text-gray-400 px-4 py-2 border-t border-gray-100">{b.notes}</p>}
+                </div>
+              )
+            })}
+            {bazaars.length === 0 && <p className="text-center text-gray-400 py-8">{ar ? 'لا توجد بازارات مسجلة' : 'No bazaars recorded'}</p>}
           </div>
         )}
 
