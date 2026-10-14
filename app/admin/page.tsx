@@ -731,7 +731,7 @@ function InventoryTab({ lang }: { lang: Lang }) {
 // ══════════════════════════════════════════════════════════════════════════════
 // FINANCE TAB
 // ══════════════════════════════════════════════════════════════════════════════
-type Bazaar = { id: string; name: string; location: string; start_date: string; end_date: string; fixed_cost: number; notes: string }
+type Bazaar = { id: string; name: string; location: string; start_date: string; end_date: string; fixed_cost: number; qty_sold: number; notes: string }
 
 function FinanceTab({ lang }: { lang: Lang }) {
   const ar = lang === 'ar'
@@ -1312,13 +1312,13 @@ function FinanceTab({ lang }: { lang: Lang }) {
               const revenue = bSales.reduce((s, r) => s + Number(r.amount), 0)
               const avgCOGS = (() => {
                 const products = Object.entries(RECIPES).filter(([n]) => n !== 'سنيكرز البندق')
-                const costs = products.map(([, recipe]) => Object.entries(recipe).reduce((s, [ing, g]) => {
-                  const found = ingredients.find(i => i.name === ing)
-                  return s + (found ? found.cost_per_gram * g : DEFAULT_INGREDIENTS.find(i => i.name === ing)?.cost_per_gram ?? 0) * g
+                const costs = products.map(([, recipe]) => Object.entries(recipe).reduce((sum, [ing, g]) => {
+                  const found = ingredients.find(i => i.name === ing) || DEFAULT_INGREDIENTS.find(i => i.name === ing)
+                  return sum + (found ? found.cost_per_gram * g : 0)
                 }, 0) + PACKAGING_COST_PER_PIECE)
                 return costs.length ? costs.reduce((a, x) => a + x, 0) / costs.length : 8.8
               })()
-              const estQty = revenue > 0 ? Math.round(revenue / 35) : 0
+              const estQty = b.qty_sold || (revenue > 0 ? Math.round(revenue / 35) : 0)
               const cogs = estQty * avgCOGS
               const netProfit = revenue - b.fixed_cost - cogs
               const roi = b.fixed_cost > 0 ? (netProfit / b.fixed_cost) * 100 : null
