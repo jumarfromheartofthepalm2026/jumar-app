@@ -221,6 +221,7 @@ function OrdersTab({ lang }: { lang: Lang }) {
   const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter)
   const counts = {
     all: orders.length,
+    pending: orders.filter(o => o.status === 'pending').length,
     new: orders.filter(o => o.status === 'new').length,
     preparing: orders.filter(o => o.status === 'preparing').length,
     ready: orders.filter(o => o.status === 'ready').length,
@@ -231,7 +232,8 @@ function OrdersTab({ lang }: { lang: Lang }) {
 
   return (
     <div className="max-w-4xl mx-auto p-4">
-      <div className="grid grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-4 gap-2 mb-4">
+        <div className="bg-orange-50 rounded-xl p-3 shadow-sm text-center"><div className="text-xl font-bold text-orange-500">{counts.pending}</div><div className="text-xs text-gray-500">{ar ? 'انتظار' : 'Pending'}</div></div>
         <div className="bg-white rounded-xl p-3 shadow-sm text-center"><div className="text-xl font-bold text-blue-600">{counts.new}</div><div className="text-xs text-gray-500">{ar ? 'جديد' : 'New'}</div></div>
         <div className="bg-white rounded-xl p-3 shadow-sm text-center"><div className="text-xl font-bold text-yellow-600">{counts.preparing}</div><div className="text-xs text-gray-500">{ar ? 'قيد التحضير' : 'Preparing'}</div></div>
         <div className="bg-white rounded-xl p-3 shadow-sm text-center"><div className="text-xl font-bold text-green-600">{counts.delivered}</div><div className="text-xs text-gray-500">{ar ? 'تم التوصيل' : 'Delivered'}</div></div>
@@ -263,7 +265,7 @@ function OrdersTab({ lang }: { lang: Lang }) {
       )}
 
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-        {(['all', 'new', 'preparing', 'ready', 'shipped', 'delivered', 'cancelled'] as const).map(s => (
+        {(['all', 'pending', 'new', 'preparing', 'ready', 'shipped', 'delivered', 'cancelled'] as const).map(s => (
           <button key={s} onClick={() => setFilter(s)}
             className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-all ${filter === s ? 'bg-jumar-brown text-white' : 'bg-white text-gray-600 border border-gray-200'}`}>
             {s === 'all' ? `${ar ? 'الكل' : 'All'} (${counts.all})` : `${STATUS_LABELS[s]} (${counts[s]})`}
@@ -371,8 +373,13 @@ function InventoryTab({ lang }: { lang: Lang }) {
   const [adjustForm, setAdjustForm] = useState({ ingredient_id: '', grams: '', note: '' })
   const [msg, setMsg] = useState('')
 
-  // علب جاهزة — عدد لكل حجم فقط
-  const [readyBoxes, setReadyBoxes] = useState<Record<number, number>>({})
+  // علب جاهزة — load from localStorage immediately on mount
+  const [readyBoxes, setReadyBoxes] = useState<Record<number, number>>(() => {
+    try {
+      const saved = localStorage.getItem('jumar_ready_boxes')
+      return saved ? JSON.parse(saved) : {}
+    } catch { return {} }
+  })
   // حاسبة الإنتاج
   const [calcPlan, setCalcPlan] = useState<Record<string, Record<number, number>>>({})
 
@@ -388,11 +395,15 @@ function InventoryTab({ lang }: { lang: Lang }) {
   }, [])
 
   const fetchBoxes = useCallback(async () => {
-    const { data } = await supabase.from('ready_boxes').select('*')
-    if (!data) return
-    const map: Record<number, number> = {}
-    data.forEach((r: any) => { map[r.box_size] = (map[r.box_size] || 0) + r.qty })
-    setReadyBoxes(map)
+    const { data, error } = await supabase.from('ready_boxes').select('box_size, qty')
+    if (!error && data && data.length > 0) {
+      // DB has data — use it and sync to localStorage
+      const map: Record<number, number> = {}
+      data.forEach((r: any) => { map[Number(r.box_size)] = Number(r.qty) })
+      setReadyBoxes(map)
+      try { localStorage.setItem('jumar_ready_boxes', JSON.stringify(map)) } catch {}
+    }
+    // if DB empty/error: state already initialized from localStorage in useState()
   }, [])
 
   useEffect(() => { fetchAll(); fetchBoxes() }, [fetchAll, fetchBoxes])
@@ -446,17 +457,24 @@ function InventoryTab({ lang }: { lang: Lang }) {
     setMsg('تم تصحيح الجرد ✅'); fetchAll()
   }
 
+  async function saveBoxQty(size: number, newQty: number) {
+    // delete all rows for this size, then insert fresh — avoids duplicate constraint issues
+    await supabase.from('ready_boxes').delete().eq('box_size', size)
+    await supabase.from('ready_boxes').insert({ box_size: size, qty: newQty })
+    setReadyBoxes(prev => {
+      const next = { ...prev, [size]: newQty }
+      try { localStorage.setItem('jumar_ready_boxes', JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+
   async function updateBoxQty(size: number, delta: number) {
     const cur = readyBoxes[size] || 0
-    const newQty = Math.max(0, cur + delta)
-    await supabase.from('ready_boxes').upsert({ box_size: size, qty: newQty }, { onConflict: 'box_size' })
-    setReadyBoxes(prev => ({ ...prev, [size]: newQty }))
+    await saveBoxQty(size, Math.max(0, cur + delta))
   }
 
   async function setBoxQtyDirect(size: number, val: number) {
-    const newQty = Math.max(0, val)
-    await supabase.from('ready_boxes').upsert({ box_size: size, qty: newQty }, { onConflict: 'box_size' })
-    setReadyBoxes(prev => ({ ...prev, [size]: newQty }))
+    await saveBoxQty(size, Math.max(0, val))
   }
 
   // حاسبة الإنتاج — احسب الخامات المطلوبة
@@ -1435,8 +1453,8 @@ function BazaarTab({ lang }: { lang: Lang }) {
   const [daySummaries, setDaySummaries] = useState<DaySummary[]>([])
   const [lastSale, setLastSale] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [lastSaleId, setLastSaleId] = useState<number | null>(null)
-  const [todaySales, setTodaySales] = useState<{ id: number; items_desc: string; amount: number; created_at: string }[]>([])
+  const [lastSaleId, setLastSaleId] = useState<string | null>(null)
+  const [todaySales, setTodaySales] = useState<{ id: string; items_desc: string; amount: number; created_at: string }[]>([])
 
   useEffect(() => {
     const now = new Date().toISOString().split('T')[0]
@@ -1483,7 +1501,7 @@ function BazaarTab({ lang }: { lang: Lang }) {
       sale_date: today, channel: 'بازار', items_desc: desc, total_qty: item.qty + item.gift,
       amount: item.price, customer_type: 'غريب', notes: `qty:${item.qty}|gift:${item.gift}|بازار لوتس أكتوبر 2026`,
     }).select('id').single()
-    if (data?.id) setLastSaleId(data.id)
+    if (data?.id) setLastSaleId(String(data.id))
     setLastSale(`${item.label} — ${item.price}${ar ? 'ج' : ' EGP'} ✅`)
     await loadSummary(); setLoading(false)
     setTimeout(() => { setLastSale(null); setLastSaleId(null) }, 8000)
