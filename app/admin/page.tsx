@@ -1601,9 +1601,10 @@ function BazaarTab({ lang }: { lang: Lang }) {
       </div>
       {(() => {
         // حساب متوسط تكلفة القطعة من الوصفات والأسعار
+        // متوسط تكلفة القطعة = خامات + تغليف (بدون سنيكرز البندق)
         const avgCostPerPiece = (() => {
-          const products = Object.values(RECIPES)
-          const costs = products.map(recipe =>
+          const bazaarProducts = Object.entries(RECIPES).filter(([name]) => name !== 'سنيكرز البندق')
+          const costs = bazaarProducts.map(([, recipe]) =>
             Object.entries(recipe).reduce((sum, [ing, grams]) => {
               const found = DEFAULT_INGREDIENTS.find(i => i.name === ing)
               return sum + (found ? found.cost_per_gram * grams : 0)
@@ -1615,7 +1616,7 @@ function BazaarTab({ lang }: { lang: Lang }) {
         const totalQty = BAZAAR_ITEMS.reduce((s, i) => s + i.qty, 0)
         const avgSalePrice = BAZAAR_ITEMS.reduce((s, i) => s + (i.price / Math.max(i.qty,1)) * i.qty, 0) / totalQty
         const margin = avgSalePrice - avgCostPerPiece
-        const BAZAAR_FIXED = 3650
+        const BAZAAR_FIXED = 3650  // رسوم البازار فقط (الخامات والتغليف variable)
         const breakEven = margin > 0 ? Math.ceil(BAZAAR_FIXED / margin) : 0
         const perDay = Math.ceil(breakEven / 3)
         const pct = breakEven > 0 ? Math.min(100, Math.round(grandSold / breakEven * 100)) : 0
