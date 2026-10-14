@@ -857,9 +857,12 @@ function FinanceTab({ lang }: { lang: Lang }) {
   orders.forEach(o => { if (o.customers?.area) areaCount[o.customers.area] = (areaCount[o.customers.area] || 0) + 1 })
   const topAreas = Object.entries(areaCount).sort(([,a],[,b]) => b - a).slice(0, 5)
 
-  // ROI البازار
-  const bazaarRevenue = sales.filter(s => s.channel === 'بازار').reduce((sum, s) => sum + Number(s.amount), 0)
-  const bazaarCost = expenses.filter(e => e.category === 'رسوم بازار').reduce((sum, e) => sum + Number(e.amount), 0)
+  // ROI البازار الحالي (أحدث بازار في الـ bazaars table)
+  const currentBazaar = bazaars.length > 0 ? bazaars.find(b => b.end_date >= new Date().toISOString().split('T')[0]) || bazaars[0] : null
+  const bazaarRevenue = currentBazaar
+    ? (currentBazaar.revenue_actual || sales.filter(s => s.channel === 'بازار' && s.sale_date >= currentBazaar.start_date && s.sale_date <= currentBazaar.end_date).reduce((sum, s) => sum + Number(s.amount), 0))
+    : sales.filter(s => s.channel === 'بازار').reduce((sum, s) => sum + Number(s.amount), 0)
+  const bazaarCost = currentBazaar ? currentBazaar.fixed_cost : expenses.filter(e => e.category === 'رسوم بازار').reduce((sum, e) => sum + Number(e.amount), 0)
   const bazaarProfit = bazaarRevenue - bazaarCost
   const bazaarROI = bazaarCost > 0 ? ((bazaarProfit / bazaarCost) * 100) : null
 
