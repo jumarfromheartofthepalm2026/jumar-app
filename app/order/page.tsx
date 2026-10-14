@@ -274,13 +274,18 @@ function OrderPageInner() {
     const num = `JM-${Date.now().toString().slice(-6)}`
     const today = new Date().toISOString().split('T')[0]
 
-    // 1. upsert customer by phone
+    // 1. get or create customer by phone
     const phone = form.phone.replace(/\D/g, '')
-    const { data: custData } = await supabase
-      .from('customers')
-      .upsert({ phone, name: form.name, address: form.address, area: '' }, { onConflict: 'phone' })
-      .select('id').single()
-    const customerId = custData?.id
+    let customerId: string | null = null
+    try {
+      const { data: existing } = await supabase.from('customers').select('id').eq('phone', phone).maybeSingle()
+      if (existing?.id) {
+        customerId = existing.id
+      } else {
+        const { data: newCust } = await supabase.from('customers').insert({ phone, name: form.name, address: form.address, area: '' }).select('id').single()
+        customerId = newCust?.id || null
+      }
+    } catch { customerId = null }
 
     // 2. insert order
     const itemsDesc = cartItems.map(i => {
