@@ -1,4 +1,4 @@
-export type OrderStatus = 'new' | 'preparing' | 'ready' | 'shipped' | 'delivered' | 'cancelled'
+export type OrderStatus = 'pending' | 'new' | 'preparing' | 'ready' | 'shipped' | 'delivered' | 'cancelled'
 
 export interface Customer {
   id: string
@@ -20,8 +20,12 @@ export interface OrderItem {
 export interface Order {
   id: string
   customer_id: string
+  order_number?: string
+  channel?: string
+  sale_date?: string
+  delivery_address?: string
   status: OrderStatus
-  box_qty: number
+  box_qty?: number
   total_price: number
   notes: string
   created_at: string
@@ -31,6 +35,7 @@ export interface Order {
 }
 
 export const STATUS_LABELS: Record<OrderStatus, string> = {
+  pending: '⏳ انتظار',
   new: '🆕 جديد',
   preparing: '👩‍🍳 قيد التحضير',
   ready: '✅ جاهز',
@@ -40,6 +45,7 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
 }
 
 export const STATUS_COLORS: Record<OrderStatus, string> = {
+  pending: 'bg-orange-100 text-orange-800',
   new: 'bg-blue-100 text-blue-800',
   preparing: 'bg-yellow-100 text-yellow-800',
   ready: 'bg-green-100 text-green-800',
