@@ -29,7 +29,7 @@ const PACKAGING_COST_PER_PIECE = 1.5 // جنيه/قطعة تكلفة تغليف
 
 // وصفة كل علبة: كمية كل خامة بالجرام للقطعة الواحدة (22 جرام)
 const RECIPES: Record<string, Record<string, number>> = {
-  'تمرية الطحينة': { 'تمر مجدول': 13, 'طحينة': 6, 'سمسم': 3 },
+  'تمرية الطحينة': { 'تمر مجدول': 17, 'طحينة': 1, 'فول سوداني': 3, 'سمسم': 1 },
   'سلطانة الفستق':  { 'تمر مجدول': 16, 'فستق': 5, 'جوز هند': 1 },
   'فدج الكاجو':     { 'تمر مجدول': 14, 'كاجو': 6, 'زبدة': 2 },
   'سنيكرز الفول':   { 'تمر عادي': 12, 'فول سوداني': 6, 'شوكولاتة دارك': 4 },
@@ -84,54 +84,67 @@ const STATUS_WA_MSGS: Record<OrderStatus, string> = {
   cancelled: 'تم إلغاء طلبك — جُمار 🌿 لأي استفسار تواصل معنا.',
 }
 
+// ── Language type ───────────────────────────────────────────────────────────
+type Lang = 'ar' | 'en'
+
 // ── Main Component ──────────────────────────────────────────────────────────
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false)
   const [password, setPassword] = useState('')
   const [activeTab, setActiveTab] = useState<'orders'|'inventory'|'finance'|'bazaar'|'analytics'>('orders')
+  const [lang, setLang] = useState<Lang>('ar')
 
   function login() {
     if (password === ADMIN_PASSWORD) setAuthed(true)
-    else alert('كلمة السر غلط')
+    else alert(lang === 'ar' ? 'كلمة السر غلط' : 'Wrong password')
   }
 
+  const isAr = lang === 'ar'
+
   if (!authed) return (
-    <div className="min-h-screen flex items-center justify-center bg-jumar-cream p-6" dir="rtl">
+    <div className="min-h-screen flex items-center justify-center bg-jumar-cream p-6" dir={isAr ? 'rtl' : 'ltr'}>
       <div className="bg-white rounded-2xl p-8 shadow-lg w-full max-w-sm text-center">
         <h1 className="text-2xl font-bold text-jumar-brown mb-2">🌿 جُمار</h1>
-        <p className="text-sm text-gray-400 mb-6">لوحة التحكم</p>
-        <input type="password" placeholder="كلمة السر" value={password}
+        <p className="text-sm text-gray-400 mb-6">{isAr ? 'لوحة التحكم' : 'Admin Dashboard'}</p>
+        <input type="password" placeholder={isAr ? 'كلمة السر' : 'Password'} value={password}
           onChange={e => setPassword(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && login()}
           className="w-full border border-gray-200 rounded-xl px-4 py-3 text-center mb-4 focus:outline-none focus:border-jumar-gold" />
-        <button onClick={login} className="w-full bg-jumar-brown text-white font-bold py-3 rounded-xl hover:opacity-90">دخول</button>
+        <button onClick={login} className="w-full bg-jumar-brown text-white font-bold py-3 rounded-xl hover:opacity-90">{isAr ? 'دخول' : 'Login'}</button>
       </div>
     </div>
   )
 
+  const navItems = [
+    { key: 'orders',    icon: '📋', label: isAr ? 'الطلبات'  : 'Orders' },
+    { key: 'inventory', icon: '📦', label: isAr ? 'المخزون'  : 'Stock' },
+    { key: 'finance',   icon: '💰', label: isAr ? 'الماليات' : 'Finance' },
+    { key: 'bazaar',    icon: '🏪', label: isAr ? 'البازار'  : 'Bazaar' },
+    { key: 'analytics', icon: '📊', label: isAr ? 'تحليلات'  : 'Analytics' },
+  ] as const
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col" dir="rtl">
+    <div className="min-h-screen bg-gray-50 flex flex-col" dir={isAr ? 'rtl' : 'ltr'}>
       <div className="bg-jumar-brown text-white px-4 py-3 flex items-center justify-between sticky top-0 z-20">
-        <h1 className="text-lg font-bold">🌿 جُمار — لوحة التحكم</h1>
-        <span className="text-xs text-white/50">admin</span>
+        <h1 className="text-lg font-bold">🌿 جُمار — {isAr ? 'لوحة التحكم' : 'Dashboard'}</h1>
+        <button
+          onClick={() => setLang(l => l === 'ar' ? 'en' : 'ar')}
+          className="text-xs font-bold px-3 py-1 rounded-full bg-white/20 text-white hover:bg-white/30 transition-all"
+        >
+          {isAr ? 'EN' : 'ع'}
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto pb-20">
-        {activeTab === 'orders'    && <OrdersTab />}
-        {activeTab === 'inventory' && <InventoryTab />}
-        {activeTab === 'finance'   && <FinanceTab />}
-        {activeTab === 'bazaar'    && <BazaarTab />}
-        {activeTab === 'analytics' && <AnalyticsTab />}
+        {activeTab === 'orders'    && <OrdersTab lang={lang} />}
+        {activeTab === 'inventory' && <InventoryTab lang={lang} />}
+        {activeTab === 'finance'   && <FinanceTab lang={lang} />}
+        {activeTab === 'bazaar'    && <BazaarTab lang={lang} />}
+        {activeTab === 'analytics' && <AnalyticsTab lang={lang} />}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20 flex">
-        {([
-          { key: 'orders',    icon: '📋', label: 'الطلبات' },
-          { key: 'inventory', icon: '📦', label: 'المخزون' },
-          { key: 'finance',   icon: '💰', label: 'الماليات' },
-          { key: 'bazaar',    icon: '🏪', label: 'البازار' },
-          { key: 'analytics', icon: '📊', label: 'تحليلات' },
-        ] as const).map(t => (
+        {navItems.map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)}
             className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 text-[11px] font-semibold transition-all relative ${activeTab === t.key ? 'text-jumar-brown' : 'text-gray-400'}`}>
             <span className="text-lg leading-none">{t.icon}</span>
@@ -147,7 +160,8 @@ export default function AdminPage() {
 // ══════════════════════════════════════════════════════════════════════════════
 // ORDERS TAB
 // ══════════════════════════════════════════════════════════════════════════════
-function OrdersTab() {
+function OrdersTab({ lang }: { lang: Lang }) {
+  const ar = lang === 'ar'
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<OrderStatus | 'all'>('all')
@@ -217,20 +231,20 @@ function OrdersTab() {
   return (
     <div className="max-w-4xl mx-auto p-4">
       <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="bg-white rounded-xl p-3 shadow-sm text-center"><div className="text-xl font-bold text-blue-600">{counts.new}</div><div className="text-xs text-gray-500">جديد</div></div>
-        <div className="bg-white rounded-xl p-3 shadow-sm text-center"><div className="text-xl font-bold text-yellow-600">{counts.preparing}</div><div className="text-xs text-gray-500">قيد التحضير</div></div>
-        <div className="bg-white rounded-xl p-3 shadow-sm text-center"><div className="text-xl font-bold text-green-600">{counts.delivered}</div><div className="text-xs text-gray-500">تم التوصيل</div></div>
+        <div className="bg-white rounded-xl p-3 shadow-sm text-center"><div className="text-xl font-bold text-blue-600">{counts.new}</div><div className="text-xs text-gray-500">{ar ? 'جديد' : 'New'}</div></div>
+        <div className="bg-white rounded-xl p-3 shadow-sm text-center"><div className="text-xl font-bold text-yellow-600">{counts.preparing}</div><div className="text-xs text-gray-500">{ar ? 'قيد التحضير' : 'Preparing'}</div></div>
+        <div className="bg-white rounded-xl p-3 shadow-sm text-center"><div className="text-xl font-bold text-green-600">{counts.delivered}</div><div className="text-xs text-gray-500">{ar ? 'تم التوصيل' : 'Delivered'}</div></div>
       </div>
 
       {sales && (
         <div className="mb-4">
           <div className="grid grid-cols-2 gap-3 mb-3">
-            <div className="bg-jumar-brown text-white rounded-xl p-4"><p className="text-xs text-white/60 mb-1">إجمالي الإيرادات</p><p className="text-xl font-bold text-jumar-gold">{sales.totalRevenue.toLocaleString('ar-EG')} ج</p></div>
-            <div className="bg-white rounded-xl p-4 shadow-sm"><p className="text-xs text-gray-400 mb-1">اليوم</p><p className="text-xl font-bold text-green-600">{sales.todayRevenue.toLocaleString('ar-EG')} ج</p></div>
+            <div className="bg-jumar-brown text-white rounded-xl p-4"><p className="text-xs text-white/60 mb-1">{ar ? 'إجمالي الإيرادات' : 'Total Revenue'}</p><p className="text-xl font-bold text-jumar-gold">{sales.totalRevenue.toLocaleString('ar-EG')} {ar ? 'ج' : 'EGP'}</p></div>
+            <div className="bg-white rounded-xl p-4 shadow-sm"><p className="text-xs text-gray-400 mb-1">{ar ? 'اليوم' : 'Today'}</p><p className="text-xl font-bold text-green-600">{sales.todayRevenue.toLocaleString('ar-EG')} {ar ? 'ج' : 'EGP'}</p></div>
           </div>
           {sales.dailyData.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow-sm">
-              <p className="text-xs font-bold text-gray-500 mb-3">آخر {sales.dailyData.length} أيام</p>
+              <p className="text-xs font-bold text-gray-500 mb-3">{ar ? `آخر ${sales.dailyData.length} أيام` : `Last ${sales.dailyData.length} days`}</p>
               <div className="flex items-end gap-1.5 h-16">
                 {(() => {
                   const max = Math.max(...sales.dailyData.map(d => d.amount), 1)
@@ -251,15 +265,15 @@ function OrdersTab() {
         {(['all', 'new', 'preparing', 'ready', 'shipped', 'delivered', 'cancelled'] as const).map(s => (
           <button key={s} onClick={() => setFilter(s)}
             className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-all ${filter === s ? 'bg-jumar-brown text-white' : 'bg-white text-gray-600 border border-gray-200'}`}>
-            {s === 'all' ? `الكل (${counts.all})` : `${STATUS_LABELS[s]} (${counts[s]})`}
+            {s === 'all' ? `${ar ? 'الكل' : 'All'} (${counts.all})` : `${STATUS_LABELS[s]} (${counts[s]})`}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="text-center py-10 text-gray-400">جاري التحميل...</div>
+        <div className="text-center py-10 text-gray-400">{ar ? 'جاري التحميل...' : 'Loading...'}</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-10 text-gray-400">مفيش طلبات</div>
+        <div className="text-center py-10 text-gray-400">{ar ? 'مفيش طلبات' : 'No orders'}</div>
       ) : (
         <div className="space-y-4">
           {filtered.map(order => (
@@ -269,11 +283,11 @@ function OrdersTab() {
                   <p className="font-bold text-jumar-brown text-lg">{order.customers?.name}</p>
                   <p className="text-sm text-gray-500">{order.customers?.phone} | {order.customers?.area}</p>
                   {order.customers?.address && <p className="text-xs text-gray-400 mt-0.5">📍 {order.customers.address}</p>}
-                  <p className="text-xs text-gray-400 mt-0.5">{new Date(order.created_at).toLocaleString('ar-EG')}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{new Date(order.created_at).toLocaleString(ar ? 'ar-EG' : 'en-US')}</p>
                 </div>
                 <div className="text-left">
-                  <p className="font-bold text-jumar-brown">{order.total_price} ج</p>
-                  <p className="text-xs text-gray-500">{order.box_qty} قطعة</p>
+                  <p className="font-bold text-jumar-brown">{order.total_price} {ar ? 'ج' : 'EGP'}</p>
+                  <p className="text-xs text-gray-500">{order.box_qty} {ar ? 'قطعة' : 'pcs'}</p>
                 </div>
               </div>
 
@@ -309,11 +323,11 @@ function OrdersTab() {
                 <a href={`https://wa.me/2${(order.customers?.whatsapp || order.customers?.phone || '').replace(/\D/g,'')}`}
                   target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-1.5 bg-green-50 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full">
-                  📲 واتساب العميل
+                  📲 {ar ? 'واتساب العميل' : 'WhatsApp Customer'}
                 </a>
                 <a href={deliveryLink(order)} target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full">
-                  🚚 إرسال للمندوب
+                  🚚 {ar ? 'إرسال للمندوب' : 'Send to Courier'}
                 </a>
               </div>
             </div>
@@ -327,7 +341,8 @@ function OrdersTab() {
 // ══════════════════════════════════════════════════════════════════════════════
 // INVENTORY TAB  (خامات + علب جاهزة + حاسبة إنتاج)
 // ══════════════════════════════════════════════════════════════════════════════
-function InventoryTab() {
+function InventoryTab({ lang }: { lang: Lang }) {
+  const ar = lang === 'ar'
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
   const [movements, setMovements] = useState<Movement[]>([])
   const [loading, setLoading] = useState(true)
@@ -442,9 +457,18 @@ function InventoryTab() {
 
   const lowStock = ingredients.filter(i => i.stock_grams < i.min_stock)
 
+  const invTabs = [
+    ['stock',      ar ? '📊 خامات'      : '📊 Ingredients'],
+    ['boxes',      ar ? '📦 علب جاهزة'  : '📦 Ready Boxes'],
+    ['calculator', ar ? '🧮 حاسبة'       : '🧮 Calculator'],
+    ['add',        ar ? '➕ إضافة'       : '➕ Add Stock'],
+    ['use',        ar ? '🔽 خصم'        : '🔽 Deduct'],
+    ['history',    ar ? '📋 سجل'        : '📋 History'],
+  ] as const
+
   return (
     <div className="max-w-2xl mx-auto p-4">
-      <h2 className="text-xl font-bold text-jumar-brown mb-4">📦 المخزون</h2>
+      <h2 className="text-xl font-bold text-jumar-brown mb-4">📦 {ar ? 'المخزون' : 'Inventory'}</h2>
 
       {msg && (
         <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-3 mb-4 text-center text-sm flex justify-between">
@@ -454,34 +478,31 @@ function InventoryTab() {
 
       {lowStock.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
-          <p className="text-red-700 font-bold text-sm mb-1">⚠️ مخزون منخفض:</p>
+          <p className="text-red-700 font-bold text-sm mb-1">⚠️ {ar ? 'مخزون منخفض:' : 'Low stock:'}</p>
           <p className="text-red-600 text-sm">{lowStock.map(i => i.name).join(' · ')}</p>
         </div>
       )}
 
       {ingredients.length === 0 && !loading && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-center">
-          <p className="text-amber-700 mb-3 text-sm">مفيش خامات مسجلة</p>
+          <p className="text-amber-700 mb-3 text-sm">{ar ? 'مفيش خامات مسجلة' : 'No ingredients registered'}</p>
           <button onClick={seedIngredients} disabled={seeding}
             className="bg-jumar-brown text-white px-6 py-2 rounded-xl font-bold hover:opacity-90 disabled:opacity-50">
-            {seeding ? 'جاري الإضافة...' : '🌿 أضف الخامات الأساسية'}
+            {seeding ? (ar ? 'جاري الإضافة...' : 'Adding...') : (ar ? '🌿 أضف الخامات الأساسية' : '🌿 Add Default Ingredients')}
           </button>
         </div>
       )}
 
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-        {([
-          ['stock','📊 خامات'],['boxes','📦 علب جاهزة'],['calculator','🧮 حاسبة'],
-          ['add','➕ إضافة'],['use','🔽 خصم'],['history','📋 سجل']
-        ] as const).map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)}
+        {invTabs.map(([key, label]) => (
+          <button key={key} onClick={() => setTab(key as any)}
             className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-all ${tab === key ? 'bg-jumar-brown text-white' : 'bg-white text-gray-600 border border-gray-200'}`}>
             {label}
           </button>
         ))}
       </div>
 
-      {loading ? <div className="text-center py-10 text-gray-400">جاري التحميل...</div> : (
+      {loading ? <div className="text-center py-10 text-gray-400">{ar ? 'جاري التحميل...' : 'Loading...'}</div> : (
         <>
           {/* ─ خامات ─ */}
           {tab === 'stock' && (
@@ -496,20 +517,20 @@ function InventoryTab() {
                       <div className="text-left"><span className={`font-bold text-lg ${low ? 'text-red-600' : 'text-jumar-brown'}`}>{ing.stock_grams.toLocaleString('ar-EG')}</span><span className="text-xs text-gray-400 mr-1">جرام</span></div>
                     </div>
                     <div className="w-full bg-gray-100 rounded-full h-2"><div className={`h-2 rounded-full ${low ? 'bg-red-400' : 'bg-jumar-gold'}`} style={{ width: `${pct}%` }} /></div>
-                    <div className="flex justify-between mt-1"><span className="text-xs text-gray-400">الحد الأدنى: {ing.min_stock}ج</span><span className="text-xs text-gray-400">{ing.cost_per_gram.toFixed(2)} ج/جرام</span></div>
+                    <div className="flex justify-between mt-1"><span className="text-xs text-gray-400">{ar ? 'الحد الأدنى' : 'Min'}: {ing.min_stock}g</span><span className="text-xs text-gray-400">{ing.cost_per_gram.toFixed(2)} {ar ? 'ج/جرام' : 'EGP/g'}</span></div>
                   </div>
                 )
               })}
               <div className="bg-white rounded-xl p-4 shadow-sm mt-4">
-                <h3 className="font-bold text-jumar-brown mb-3">🔧 تصحيح جرد</h3>
+                <h3 className="font-bold text-jumar-brown mb-3">🔧 {ar ? 'تصحيح جرد' : 'Stock Adjustment'}</h3>
                 <form onSubmit={handleAdjust} className="space-y-3">
                   <select value={adjustForm.ingredient_id} onChange={e => setAdjustForm({ ...adjustForm, ingredient_id: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold">
-                    <option value="">اختر الخامة</option>
-                    {ingredients.map(i => <option key={i.id} value={i.id}>{i.name} — {i.stock_grams}ج</option>)}
+                    <option value="">{ar ? 'اختر الخامة' : 'Select ingredient'}</option>
+                    {ingredients.map(i => <option key={i.id} value={i.id}>{i.name} — {i.stock_grams}g</option>)}
                   </select>
-                  <input type="number" placeholder="الكمية الفعلية (جرام)" value={adjustForm.grams} onChange={e => setAdjustForm({ ...adjustForm, grams: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
-                  <input placeholder="سبب التصحيح" value={adjustForm.note} onChange={e => setAdjustForm({ ...adjustForm, note: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
-                  <button type="submit" className="w-full bg-jumar-brown text-white font-bold py-3 rounded-xl hover:opacity-90">حفظ الجرد</button>
+                  <input type="number" placeholder={ar ? 'الكمية الفعلية (جرام)' : 'Actual quantity (grams)'} value={adjustForm.grams} onChange={e => setAdjustForm({ ...adjustForm, grams: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
+                  <input placeholder={ar ? 'سبب التصحيح' : 'Reason'} value={adjustForm.note} onChange={e => setAdjustForm({ ...adjustForm, note: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
+                  <button type="submit" className="w-full bg-jumar-brown text-white font-bold py-3 rounded-xl hover:opacity-90">{ar ? 'حفظ الجرد' : 'Save Adjustment'}</button>
                 </form>
               </div>
             </div>
@@ -518,7 +539,7 @@ function InventoryTab() {
           {/* ─ علب جاهزة ─ */}
           {tab === 'boxes' && (
             <div className="space-y-3">
-              <p className="text-xs text-gray-400 text-center mb-2">عدد العلب الجاهزة للبيع — اضغط + / − لتحديث الرقم</p>
+              <p className="text-xs text-gray-400 text-center mb-2">{ar ? 'عدد العلب الجاهزة للبيع — اضغط + / − لتحديث الرقم' : 'Ready boxes for sale — tap + / − to update'}</p>
               <div className="grid grid-cols-1 gap-3">
                 {BOX_SIZES.map(({ label, pieces }) => {
                   const qty = readyBoxes[pieces] || 0
@@ -526,7 +547,7 @@ function InventoryTab() {
                     <div key={pieces} className="bg-white rounded-2xl p-4 shadow-sm flex items-center justify-between">
                       <div>
                         <p className="font-bold text-jumar-brown text-lg">{label}</p>
-                        <p className="text-xs text-gray-400">{pieces} قطعة</p>
+                        <p className="text-xs text-gray-400">{pieces} {ar ? 'قطعة' : 'pcs'}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <button onClick={() => updateBoxQty(pieces, -1)} className="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 text-xl font-bold hover:bg-red-50 hover:text-red-600 transition-all">−</button>
@@ -538,7 +559,7 @@ function InventoryTab() {
                 })}
               </div>
               <div className="bg-jumar-brown text-white rounded-2xl p-4 text-center">
-                <p className="text-white/70 text-sm mb-1">إجمالي العلب</p>
+                <p className="text-white/70 text-sm mb-1">{ar ? 'إجمالي العلب' : 'Total Boxes'}</p>
                 <p className="text-4xl font-bold text-jumar-gold">{Object.values(readyBoxes).reduce((s, v) => s + v, 0)}</p>
               </div>
             </div>
@@ -547,7 +568,7 @@ function InventoryTab() {
           {/* ─ حاسبة الإنتاج ─ */}
           {tab === 'calculator' && (
             <div className="space-y-4">
-              <p className="text-xs text-gray-400 text-center">دخّل عدد العلب اللي عايز تعملها → يطلع المطلوب من كل خامة</p>
+              <p className="text-xs text-gray-400 text-center">{ar ? 'دخّل عدد العلب اللي عايز تعملها → يطلع المطلوب من كل خامة' : 'Enter box quantities → get required ingredients'}</p>
               {Object.keys(RECIPES).map(product => (
                 <div key={product} className="bg-white rounded-2xl p-4 shadow-sm">
                   <p className="font-bold text-jumar-brown mb-3">{product}</p>
@@ -572,8 +593,8 @@ function InventoryTab() {
               {totalPieces > 0 && (
                 <div className="bg-jumar-brown text-white rounded-2xl p-4 space-y-3">
                   <div className="flex justify-between items-center">
-                    <p className="font-bold text-jumar-gold">🧮 المطلوب من الخامات</p>
-                    <p className="text-xs text-white/60">{totalPieces} قطعة إجمالي</p>
+                    <p className="font-bold text-jumar-gold">🧮 {ar ? 'المطلوب من الخامات' : 'Required Ingredients'}</p>
+                    <p className="text-xs text-white/60">{totalPieces} {ar ? 'قطعة إجمالي' : 'pcs total'}</p>
                   </div>
                   {Object.entries(calcResult).sort(([,a],[,b]) => b - a).map(([name, grams]) => {
                     const ing = ingredients.find(i => i.name === name)
@@ -583,12 +604,12 @@ function InventoryTab() {
                         <span className="text-sm text-white/80">{name}</span>
                         <div className="text-left">
                           <span className={`font-bold ${enough ? 'text-jumar-gold' : 'text-red-300'}`}>{grams.toFixed(0)}ج</span>
-                          {ing && <span className={`text-xs mr-2 ${enough ? 'text-white/40' : 'text-red-300'}`}>({enough ? `✓ متاح ${ing.stock_grams.toFixed(0)}ج` : `✗ ناقص ${(grams - ing.stock_grams).toFixed(0)}ج`})</span>}
+                          {ing && <span className={`text-xs mr-2 ${enough ? 'text-white/40' : 'text-red-300'}`}>({enough ? `✓ ${ar ? 'متاح' : 'avail'} ${ing.stock_grams.toFixed(0)}g` : `✗ ${ar ? 'ناقص' : 'short'} ${(grams - ing.stock_grams).toFixed(0)}g`})</span>}
                         </div>
                       </div>
                     )
                   })}
-                  <button onClick={() => setCalcPlan({})} className="w-full mt-2 bg-white/10 text-white text-sm py-2 rounded-xl hover:bg-white/20">مسح الحاسبة</button>
+                  <button onClick={() => setCalcPlan({})} className="w-full mt-2 bg-white/10 text-white text-sm py-2 rounded-xl hover:bg-white/20">{ar ? 'مسح الحاسبة' : 'Clear Calculator'}</button>
                 </div>
               )}
             </div>
@@ -597,17 +618,17 @@ function InventoryTab() {
           {/* ─ إضافة مخزون ─ */}
           {tab === 'add' && (
             <div className="bg-white rounded-2xl p-5 shadow-sm">
-              <h2 className="font-bold text-jumar-brown text-lg mb-4">➕ تسجيل مشتريات جديدة</h2>
+              <h2 className="font-bold text-jumar-brown text-lg mb-4">➕ {ar ? 'تسجيل مشتريات جديدة' : 'Record New Purchase'}</h2>
               <form onSubmit={handleAddStock} className="space-y-3">
                 <select value={addForm.ingredient_id} onChange={e => setAddForm({ ...addForm, ingredient_id: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold">
-                  <option value="">اختر الخامة *</option>
+                  <option value="">{ar ? 'اختر الخامة *' : 'Select ingredient *'}</option>
                   {ingredients.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                 </select>
-                <input required type="number" placeholder="الكمية (جرام) *" value={addForm.grams} onChange={e => setAddForm({ ...addForm, grams: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
-                <input type="number" placeholder="التكلفة الإجمالية (جنيه)" value={addForm.cost} onChange={e => setAddForm({ ...addForm, cost: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
-                <input placeholder="ملاحظة" value={addForm.note} onChange={e => setAddForm({ ...addForm, note: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
-                {addForm.grams && addForm.cost && <p className="text-sm text-jumar-gold text-center">سعر الجرام: {(parseFloat(addForm.cost) / parseFloat(addForm.grams)).toFixed(2)} ج</p>}
-                <button type="submit" className="w-full bg-jumar-gold text-jumar-brown font-bold py-3 rounded-xl hover:opacity-90">✅ تسجيل المشتريات</button>
+                <input required type="number" placeholder={ar ? 'الكمية (جرام) *' : 'Quantity (grams) *'} value={addForm.grams} onChange={e => setAddForm({ ...addForm, grams: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
+                <input type="number" placeholder={ar ? 'التكلفة الإجمالية (جنيه)' : 'Total cost (EGP)'} value={addForm.cost} onChange={e => setAddForm({ ...addForm, cost: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
+                <input placeholder={ar ? 'ملاحظة' : 'Note'} value={addForm.note} onChange={e => setAddForm({ ...addForm, note: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
+                {addForm.grams && addForm.cost && <p className="text-sm text-jumar-gold text-center">{ar ? 'سعر الجرام' : 'Cost/gram'}: {(parseFloat(addForm.cost) / parseFloat(addForm.grams)).toFixed(2)} {ar ? 'ج' : 'EGP'}</p>}
+                <button type="submit" className="w-full bg-jumar-gold text-jumar-brown font-bold py-3 rounded-xl hover:opacity-90">✅ {ar ? 'تسجيل المشتريات' : 'Save Purchase'}</button>
               </form>
             </div>
           )}
@@ -615,15 +636,15 @@ function InventoryTab() {
           {/* ─ خصم استخدام ─ */}
           {tab === 'use' && (
             <div className="bg-white rounded-2xl p-5 shadow-sm">
-              <h2 className="font-bold text-jumar-brown text-lg mb-4">🔽 خصم استخدام في الإنتاج</h2>
+              <h2 className="font-bold text-jumar-brown text-lg mb-4">🔽 {ar ? 'خصم استخدام في الإنتاج' : 'Deduct Production Use'}</h2>
               <form onSubmit={handleUseStock} className="space-y-3">
                 <select value={useForm.ingredient_id} onChange={e => setUseForm({ ...useForm, ingredient_id: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold">
-                  <option value="">اختر الخامة *</option>
-                  {ingredients.map(i => <option key={i.id} value={i.id}>{i.name} — متاح: {i.stock_grams}ج</option>)}
+                  <option value="">{ar ? 'اختر الخامة *' : 'Select ingredient *'}</option>
+                  {ingredients.map(i => <option key={i.id} value={i.id}>{i.name} — {ar ? 'متاح' : 'avail'}: {i.stock_grams}g</option>)}
                 </select>
-                <input required type="number" placeholder="الكمية المستخدمة (جرام) *" value={useForm.grams} onChange={e => setUseForm({ ...useForm, grams: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
-                <input placeholder="الدفعة / المنتج" value={useForm.note} onChange={e => setUseForm({ ...useForm, note: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
-                <button type="submit" className="w-full bg-red-500 text-white font-bold py-3 rounded-xl hover:opacity-90">🔽 خصم من المخزون</button>
+                <input required type="number" placeholder={ar ? 'الكمية المستخدمة (جرام) *' : 'Used quantity (grams) *'} value={useForm.grams} onChange={e => setUseForm({ ...useForm, grams: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
+                <input placeholder={ar ? 'الدفعة / المنتج' : 'Batch / Product'} value={useForm.note} onChange={e => setUseForm({ ...useForm, note: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
+                <button type="submit" className="w-full bg-red-500 text-white font-bold py-3 rounded-xl hover:opacity-90">🔽 {ar ? 'خصم من المخزون' : 'Deduct Stock'}</button>
               </form>
             </div>
           )}
@@ -631,19 +652,20 @@ function InventoryTab() {
           {/* ─ السجل ─ */}
           {tab === 'history' && (
             <div className="space-y-2">
-              {movements.length === 0 ? <div className="text-center py-10 text-gray-400">لا توجد حركات مسجلة</div>
+              {movements.length === 0 ? <div className="text-center py-10 text-gray-400">{ar ? 'لا توجد حركات مسجلة' : 'No movements recorded'}</div>
               : movements.map(m => (
                 <div key={m.id} className="bg-white rounded-xl p-4 shadow-sm flex justify-between items-center">
                   <div>
                     <p className="font-semibold text-gray-800">{m.ingredients?.name}</p>
                     <p className="text-xs text-gray-400">{m.note}</p>
-                    <p className="text-xs text-gray-400">{new Date(m.created_at).toLocaleString('ar-EG')}</p>
+                    <p className="text-xs text-gray-400">{new Date(m.created_at).toLocaleString(ar ? 'ar-EG' : 'en-US')}</p>
                   </div>
                   <div className="text-left">
                     <span className={`font-bold text-lg ${m.type === 'in' ? 'text-green-600' : m.type === 'out' ? 'text-red-500' : 'text-blue-500'}`}>
-                      {m.type === 'in' ? '+' : m.type === 'out' ? '−' : '~'}{Math.abs(m.grams)}ج
+                      {m.type === 'in' ? '+' : m.type === 'out' ? '−' : '~'}{Math.abs(m.grams)}{ar ? 'ج' : 'g'}
                     </span>
-                    {m.cost > 0 && <p className="text-xs text-gray-400">{m.cost.toFixed(0)} ج</p>}
+                    <p className="text-xs font-medium mt-0.5">{m.type === 'in' ? (ar ? 'وارد' : 'In') : m.type === 'out' ? (ar ? 'صادر' : 'Out') : (ar ? 'تعديل' : 'Adjust')}</p>
+                    {m.cost > 0 && <p className="text-xs text-gray-400">{m.cost.toFixed(0)} {ar ? 'ج' : 'EGP'}</p>}
                   </div>
                 </div>
               ))}
@@ -658,7 +680,8 @@ function InventoryTab() {
 // ══════════════════════════════════════════════════════════════════════════════
 // FINANCE TAB
 // ══════════════════════════════════════════════════════════════════════════════
-function FinanceTab() {
+function FinanceTab({ lang }: { lang: Lang }) {
+  const ar = lang === 'ar'
   const [tab, setTab] = useState<'overview'|'pl'|'cogs'|'inventory_turn'|'channels'|'customers'|'bazaar_roi'|'cashflow'|'sales'|'expenses'>('overview')
   const [kpis, setKpis] = useState<KPIs | null>(null)
   const [monthlyData, setMonthlyData] = useState<MonthRow[]>([])
@@ -697,9 +720,13 @@ function FinanceTab() {
 
   useEffect(() => { loadData() }, [loadData])
 
-  const fmt = (n: number) => n.toLocaleString('ar-EG', { maximumFractionDigits: 0 })
+  const fmt = (n: number) => n.toLocaleString(ar ? 'ar-EG' : 'en-US', { maximumFractionDigits: 0 })
+  const cur = ar ? 'ج' : 'EGP'
   const fmtPct = (n: number) => `${n.toFixed(1)}%`
   const fmtMonth = (m: string) => {
+    if (!ar) {
+      const [y, mo] = m.split('-'); return new Date(parseInt(y), parseInt(mo)-1).toLocaleString('en-US', {month:'short', year:'numeric'})
+    }
     const months: Record<string,string> = {'01':'يناير','02':'فبراير','03':'مارس','04':'أبريل','05':'مايو','06':'يونيو','07':'يوليو','08':'أغسطس','09':'سبتمبر','10':'أكتوبر','11':'نوفمبر','12':'ديسمبر'}
     const [y, mo] = m.split('-'); return `${months[mo]} ${y}`
   }
@@ -797,23 +824,23 @@ function FinanceTab() {
     setSaving(false)
   }
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">جارٍ التحميل...</div>
+  if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">{ar ? 'جارٍ التحميل...' : 'Loading...'}</div>
 
   const TABS = [
-    ['overview','📊 نظرة سريعة'],
-    ['pl','📋 P&L'],
-    ['cogs','🏭 تكلفة الإنتاج'],
-    ['inventory_turn','🔄 دوران المخزون'],
-    ['channels','📡 القنوات'],
-    ['customers','👥 العملاء'],
-    ['bazaar_roi','🏪 ROI البازار'],
-    ['cashflow','💵 التدفق النقدي'],
-    ['sales','🛍️ تسجيل بيعة'],
-    ['expenses','🧾 تسجيل مصروف'],
+    ['overview', ar ? '📊 نظرة سريعة' : '📊 Overview'],
+    ['pl',       ar ? '📋 P&L'        : '📋 P&L'],
+    ['cogs',     ar ? '🏭 تكلفة إنتاج' : '🏭 COGS'],
+    ['inventory_turn', ar ? '🔄 دوران مخزون' : '🔄 Inventory'],
+    ['channels', ar ? '📡 القنوات'    : '📡 Channels'],
+    ['customers',ar ? '👥 العملاء'    : '👥 Customers'],
+    ['bazaar_roi',ar ? '🏪 ROI بازار' : '🏪 Bazaar ROI'],
+    ['cashflow', ar ? '💵 تدفق نقدي'  : '💵 Cash Flow'],
+    ['sales',    ar ? '🛍️ بيعة'       : '🛍️ Add Sale'],
+    ['expenses', ar ? '🧾 مصروف'      : '🧾 Add Expense'],
   ] as const
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto" dir={ar ? 'rtl' : 'ltr'}>
       {/* Tab bar — horizontal scroll */}
       <div className="flex gap-1 overflow-x-auto pb-0 bg-white border-b border-gray-200 px-2 pt-2">
         {TABS.map(([key, label]) => (
@@ -832,10 +859,10 @@ function FinanceTab() {
             {/* KPI tiles */}
             <div className="grid grid-cols-2 gap-3">
               {[
-                { label: 'إجمالي الإيرادات', value: fmt(totalRevenue) + ' ج', color: 'text-green-600' },
-                { label: 'صافي الربح', value: (netProfit >= 0 ? '+' : '') + fmt(netProfit) + ' ج', color: netProfit >= 0 ? 'text-green-600' : 'text-red-500' },
-                { label: 'هامش إجمالي', value: fmtPct(grossMargin), color: 'text-jumar-gold' },
-                { label: 'هامش صافي', value: fmtPct(netMargin), color: netMargin >= 0 ? 'text-jumar-brown' : 'text-red-500' },
+                { label: ar ? 'إجمالي الإيرادات' : 'Total Revenue', value: fmt(totalRevenue) + ' ' + cur, color: 'text-green-600' },
+                { label: ar ? 'صافي الربح' : 'Net Profit', value: (netProfit >= 0 ? '+' : '') + fmt(netProfit) + ' ' + cur, color: netProfit >= 0 ? 'text-green-600' : 'text-red-500' },
+                { label: ar ? 'هامش إجمالي' : 'Gross Margin', value: fmtPct(grossMargin), color: 'text-jumar-gold' },
+                { label: ar ? 'هامش صافي' : 'Net Margin', value: fmtPct(netMargin), color: netMargin >= 0 ? 'text-jumar-brown' : 'text-red-500' },
               ].map((kpi, i) => (
                 <div key={i} className="bg-white rounded-2xl shadow-sm text-center p-4 flex flex-col gap-2 min-h-[90px] justify-center">
                   <p className="text-xs text-gray-500 leading-snug">{kpi.label}</p>
@@ -847,39 +874,39 @@ function FinanceTab() {
             {/* قيمة المخزون */}
             <div className="bg-jumar-brown text-white rounded-2xl p-4 space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-white/60">قيمة المخزون</span>
-                <span className="font-bold text-jumar-gold">{fmt(inventoryValue)} ج</span>
+                <span className="text-sm text-white/60">{ar ? 'قيمة المخزون' : 'Inventory Value'}</span>
+                <span className="font-bold text-jumar-gold">{fmt(inventoryValue)} {cur}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-white/60">قطع مباعة</span>
-                <span className="font-bold">{totalQtySold} قطعة</span>
+                <span className="text-sm text-white/60">{ar ? 'قطع مباعة' : 'Units Sold'}</span>
+                <span className="font-bold">{totalQtySold} {ar ? 'قطعة' : 'pcs'}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-white/60">أيام تشغيل</span>
-                <span className="font-bold">{Object.keys(Object.fromEntries(sales.map(s => [s.sale_date, 1]))).length} يوم</span>
+                <span className="text-sm text-white/60">{ar ? 'أيام تشغيل' : 'Active Days'}</span>
+                <span className="font-bold">{Object.keys(Object.fromEntries(sales.map(s => [s.sale_date, 1]))).length} {ar ? 'يوم' : 'days'}</span>
               </div>
             </div>
 
             {/* break-even */}
             {breakEvenPieces > 0 && (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-                <p className="text-sm font-bold text-amber-800 mb-1">🎯 Break-Even الشهري</p>
-                <p className="text-2xl font-bold text-amber-700">{breakEvenPieces.toLocaleString('ar-EG')} قطعة/شهر</p>
-                <p className="text-xs text-amber-600 mt-1">({Math.round(breakEvenPieces / 30)} قطعة/يوم) · هامش مساهمة: {fmt(contributionMarginPerPiece)} ج/قطعة</p>
+                <p className="text-sm font-bold text-amber-800 mb-1">🎯 {ar ? 'Break-Even الشهري' : 'Monthly Break-Even'}</p>
+                <p className="text-2xl font-bold text-amber-700">{breakEvenPieces.toLocaleString(ar ? 'ar-EG' : 'en-US')} {ar ? 'قطعة/شهر' : 'pcs/month'}</p>
+                <p className="text-xs text-amber-600 mt-1">({Math.round(breakEvenPieces / 30)} {ar ? 'قطعة/يوم' : 'pcs/day'}) · {ar ? 'هامش مساهمة' : 'Contribution margin'}: {fmt(contributionMarginPerPiece)} {cur}/{ar ? 'قطعة' : 'pc'}</p>
               </div>
             )}
 
             {/* ملخص شهري */}
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="p-4 border-b border-gray-100"><h2 className="font-bold text-jumar-brown">📅 ملخص شهري</h2></div>
+              <div className="p-4 border-b border-gray-100"><h2 className="font-bold text-jumar-brown">📅 {ar ? 'ملخص شهري' : 'Monthly Summary'}</h2></div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="p-3 text-right text-gray-500 font-medium">الشهر</th>
-                      <th className="p-3 text-center text-green-600 font-medium">إيرادات</th>
-                      <th className="p-3 text-center text-red-500 font-medium">مصروفات</th>
-                      <th className="p-3 text-center text-jumar-brown font-medium">صافي</th>
+                      <th className="p-3 text-right text-gray-500 font-medium">{ar ? 'الشهر' : 'Month'}</th>
+                      <th className="p-3 text-center text-green-600 font-medium">{ar ? 'إيرادات' : 'Revenue'}</th>
+                      <th className="p-3 text-center text-red-500 font-medium">{ar ? 'مصروفات' : 'Expenses'}</th>
+                      <th className="p-3 text-center text-jumar-brown font-medium">{ar ? 'صافي' : 'Net'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -892,7 +919,7 @@ function FinanceTab() {
                       </tr>
                     ))}
                     <tr className="border-t-2 border-gray-200 bg-jumar-cream font-bold">
-                      <td className="p-3 text-right text-jumar-brown">الإجمالي</td>
+                      <td className="p-3 text-right text-jumar-brown">{ar ? 'الإجمالي' : 'Total'}</td>
                       <td className="p-3 text-center text-green-600">{fmt(totalRevenue)}</td>
                       <td className="p-3 text-center text-red-500">{fmt(totalOpex)}</td>
                       <td className={`p-3 text-center ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{netProfit >= 0 ? '+' : ''}{fmt(netProfit)}</td>
@@ -909,42 +936,39 @@ function FinanceTab() {
           <div className="space-y-3">
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
               <div className="px-4 py-3 bg-jumar-brown text-white">
-                <h2 className="font-bold">📋 قائمة الأرباح والخسائر</h2>
-                <p className="text-xs text-white/60 mt-0.5">إجمالي منذ البداية</p>
+                <h2 className="font-bold">📋 {ar ? 'قائمة الأرباح والخسائر' : 'Profit & Loss Statement'}</h2>
+                <p className="text-xs text-white/60 mt-0.5">{ar ? 'إجمالي منذ البداية' : 'All-time cumulative'}</p>
               </div>
               <div className="divide-y divide-gray-100">
-                {/* إيرادات */}
                 <div className="flex justify-between items-center px-4 py-3">
-                  <span className="font-bold text-gray-800 text-sm">إجمالي الإيرادات</span>
-                  <span className="font-bold text-green-600">{fmt(totalRevenue)} ج</span>
+                  <span className="font-bold text-gray-800 text-sm">{ar ? 'إجمالي الإيرادات' : 'Total Revenue'}</span>
+                  <span className="font-bold text-green-600">{fmt(totalRevenue)} {cur}</span>
                 </div>
                 <div className="flex justify-between items-center px-4 py-2 bg-gray-50">
-                  <span className="text-gray-500 text-sm pr-4">(-) تكلفة البضاعة (COGS)</span>
-                  <span className="font-semibold text-red-500 text-sm">−{fmt(totalCOGS)} ج</span>
+                  <span className="text-gray-500 text-sm pr-4">(-) {ar ? 'تكلفة البضاعة (COGS)' : 'Cost of Goods (COGS)'}</span>
+                  <span className="font-semibold text-red-500 text-sm">−{fmt(totalCOGS)} {cur}</span>
                 </div>
-                {/* gross profit */}
                 <div className="px-4 py-3">
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-gray-800 text-sm">= إجمالي الربح</span>
-                    <span className={`font-bold ${grossProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmt(grossProfit)} ج</span>
+                    <span className="font-bold text-gray-800 text-sm">= {ar ? 'إجمالي الربح' : 'Gross Profit'}</span>
+                    <span className={`font-bold ${grossProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmt(grossProfit)} {cur}</span>
                   </div>
-                  <p className="text-xs text-jumar-gold mt-0.5">هامش إجمالي: {fmtPct(grossMargin)}</p>
+                  <p className="text-xs text-jumar-gold mt-0.5">{ar ? 'هامش إجمالي' : 'Gross margin'}: {fmtPct(grossMargin)}</p>
                 </div>
                 <div className="flex justify-between items-center px-4 py-2 bg-gray-50">
-                  <span className="text-gray-500 text-sm pr-4">(-) مصاريف التشغيل (OPEX)</span>
-                  <span className="font-semibold text-red-500 text-sm">−{fmt(totalOpex)} ج</span>
+                  <span className="text-gray-500 text-sm pr-4">(-) {ar ? 'مصاريف التشغيل (OPEX)' : 'Operating Expenses (OPEX)'}</span>
+                  <span className="font-semibold text-red-500 text-sm">−{fmt(totalOpex)} {cur}</span>
                 </div>
                 <div className="flex justify-between items-center px-4 py-2 bg-gray-50">
-                  <span className="text-gray-500 text-sm pr-4">(-) تكلفة الهدايا ({totalGiftQty} قطعة)</span>
-                  <span className="font-semibold text-orange-500 text-sm">−{fmt(giftCost)} ج</span>
+                  <span className="text-gray-500 text-sm pr-4">(-) {ar ? `تكلفة الهدايا (${totalGiftQty} قطعة)` : `Gift cost (${totalGiftQty} pcs)`}</span>
+                  <span className="font-semibold text-orange-500 text-sm">−{fmt(giftCost)} {cur}</span>
                 </div>
-                {/* net profit */}
                 <div className={`px-4 py-3 ${netProfit >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-gray-800">= صافي الربح</span>
-                    <span className={`font-bold text-lg ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{netProfit >= 0 ? '' : '−'}{fmt(Math.abs(netProfit))} ج</span>
+                    <span className="font-bold text-gray-800">= {ar ? 'صافي الربح' : 'Net Profit'}</span>
+                    <span className={`font-bold text-lg ${netProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{netProfit >= 0 ? '' : '−'}{fmt(Math.abs(netProfit))} {cur}</span>
                   </div>
-                  <p className="text-xs text-jumar-gold mt-0.5">هامش صافي: {fmtPct(netMargin)}</p>
+                  <p className="text-xs text-jumar-gold mt-0.5">{ar ? 'هامش صافي' : 'Net margin'}: {fmtPct(netMargin)}</p>
                 </div>
               </div>
             </div>
@@ -955,9 +979,9 @@ function FinanceTab() {
         {tab === 'cogs' && (
           <div className="space-y-3">
             <div className="bg-jumar-brown text-white rounded-2xl p-4 text-center">
-              <p className="text-xs text-white/60 mb-1">متوسط تكلفة القطعة الواحدة</p>
-              <p className="text-3xl font-bold text-jumar-gold">{(avgCogPerPiece + PACKAGING_COST_PER_PIECE).toFixed(2)} ج</p>
-              <p className="text-xs text-white/50 mt-1">خامات: {avgCogPerPiece.toFixed(2)}ج + تغليف: {PACKAGING_COST_PER_PIECE}ج</p>
+              <p className="text-xs text-white/60 mb-1">{ar ? 'متوسط تكلفة القطعة الواحدة' : 'Avg cost per piece'}</p>
+              <p className="text-3xl font-bold text-jumar-gold">{(avgCogPerPiece + PACKAGING_COST_PER_PIECE).toFixed(2)} {cur}</p>
+              <p className="text-xs text-white/50 mt-1">{ar ? 'خامات' : 'Ingredients'}: {avgCogPerPiece.toFixed(2)}{cur} + {ar ? 'تغليف' : 'Packaging'}: {PACKAGING_COST_PER_PIECE}{cur}</p>
             </div>
             {Object.keys(RECIPES).map(product => {
               const rawCost = cogPerPiece(product)
@@ -971,7 +995,7 @@ function FinanceTab() {
                     <div className="flex justify-between items-center">
                       <p className="font-bold text-jumar-brown">{product}</p>
                       <span className={`text-sm font-bold px-2 py-0.5 rounded-full ${margin >= 40 ? 'bg-green-100 text-green-700' : margin >= 20 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'}`}>
-                        هامش {fmtPct(margin)}
+                        {ar ? 'هامش' : 'Margin'} {fmtPct(margin)}
                       </span>
                     </div>
                   </div>
@@ -987,23 +1011,23 @@ function FinanceTab() {
                       )
                     })}
                     <div className="flex justify-between text-xs text-gray-600 pt-1 border-t border-gray-100">
-                      <span>تغليف</span><span>{PACKAGING_COST_PER_PIECE.toFixed(2)} ج</span>
+                      <span>{ar ? 'تغليف' : 'Packaging'}</span><span>{PACKAGING_COST_PER_PIECE.toFixed(2)} {cur}</span>
                     </div>
                     <div className="flex justify-between text-sm font-bold pt-2 border-t border-gray-200">
-                      <span className="text-gray-700">إجمالي التكلفة</span>
-                      <span className="text-red-500">{totalCost.toFixed(2)} ج</span>
+                      <span className="text-gray-700">{ar ? 'إجمالي التكلفة' : 'Total Cost'}</span>
+                      <span className="text-red-500">{totalCost.toFixed(2)} {cur}</span>
                     </div>
                     <div className="flex justify-between text-sm font-bold">
-                      <span className="text-gray-700">سعر البيع</span>
-                      <span className="text-green-600">{salePrice} ج</span>
+                      <span className="text-gray-700">{ar ? 'سعر البيع' : 'Sale Price'}</span>
+                      <span className="text-green-600">{salePrice} {cur}</span>
                     </div>
                     <div className="flex justify-between text-sm font-bold">
-                      <span className="text-gray-700">ربح القطعة</span>
-                      <span className={salePrice - totalCost >= 0 ? 'text-jumar-brown' : 'text-red-500'}>{(salePrice - totalCost).toFixed(2)} ج</span>
+                      <span className="text-gray-700">{ar ? 'ربح القطعة' : 'Profit/pc'}</span>
+                      <span className={salePrice - totalCost >= 0 ? 'text-jumar-brown' : 'text-red-500'}>{(salePrice - totalCost).toFixed(2)} {cur}</span>
                     </div>
                     {/* علب */}
                     <div className="mt-2 pt-2 border-t border-gray-100">
-                      <p className="text-xs text-gray-400 mb-1">هامش ربح العلب:</p>
+                      <p className="text-xs text-gray-400 mb-1">{ar ? 'هامش ربح العلب:' : 'Box margins:'}</p>
                       <div className="grid grid-cols-3 gap-1">
                         {BOX_SIZES.map(({ label, pieces }) => {
                           const boxSale = pieces === 8 ? 260 : pieces === 15 ? 450 : 650
@@ -1030,8 +1054,8 @@ function FinanceTab() {
         {tab === 'inventory_turn' && (
           <div className="space-y-3">
             <div className="bg-jumar-brown text-white rounded-2xl p-4 grid grid-cols-2 gap-4 text-center">
-              <div><p className="text-xs text-white/60 mb-1">قيمة المخزون الحالي</p><p className="text-2xl font-bold text-jumar-gold">{fmt(inventoryValue)} ج</p></div>
-              <div><p className="text-xs text-white/60 mb-1">متوسط مبيعات يومي</p><p className="text-2xl font-bold">{fmt(dailySalesAvg)} ج</p></div>
+              <div><p className="text-xs text-white/60 mb-1">{ar ? 'قيمة المخزون الحالي' : 'Current Inventory Value'}</p><p className="text-2xl font-bold text-jumar-gold">{fmt(inventoryValue)} {cur}</p></div>
+              <div><p className="text-xs text-white/60 mb-1">{ar ? 'متوسط مبيعات يومي' : 'Daily Sales Avg'}</p><p className="text-2xl font-bold">{fmt(dailySalesAvg)} {cur}</p></div>
             </div>
             <div className="space-y-2">
               {ingredients.map(ing => {
@@ -1051,17 +1075,17 @@ function FinanceTab() {
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-bold text-gray-800">{ing.name}</p>
-                        <p className="text-xs text-gray-400">{ing.stock_grams.toLocaleString('ar-EG')} جرام · {ing.cost_per_gram.toFixed(2)} ج/ج</p>
-                        <p className="text-xs text-gray-400">قيمة: {fmt(stockValue)} ج</p>
+                        <p className="text-xs text-gray-400">{ing.stock_grams.toLocaleString(ar ? 'ar-EG' : 'en-US')}g · {ing.cost_per_gram.toFixed(2)} {cur}/g</p>
+                        <p className="text-xs text-gray-400">{ar ? 'قيمة' : 'Value'}: {fmt(stockValue)} {cur}</p>
                       </div>
                       <div className="text-left">
                         {daysLeft !== null ? (
                           <div className={`text-center px-3 py-1.5 rounded-xl ${isCritical ? 'bg-red-100' : isLow ? 'bg-amber-100' : 'bg-green-100'}`}>
                             <p className={`text-xl font-bold ${isCritical ? 'text-red-600' : isLow ? 'text-amber-600' : 'text-green-600'}`}>{daysLeft}</p>
-                            <p className={`text-xs ${isCritical ? 'text-red-500' : isLow ? 'text-amber-500' : 'text-green-500'}`}>يوم</p>
+                            <p className={`text-xs ${isCritical ? 'text-red-500' : isLow ? 'text-amber-500' : 'text-green-500'}`}>{ar ? 'يوم' : 'days'}</p>
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-300">غير مستخدم</span>
+                          <span className="text-xs text-gray-300">{ar ? 'غير مستخدم' : 'Unused'}</span>
                         )}
                       </div>
                     </div>
@@ -1070,7 +1094,7 @@ function FinanceTab() {
               })}
             </div>
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
-              ⚠️ الأرقام تقديرية بناءً على معدل المبيعات الحالي والوصفات المسجلة
+              ⚠️ {ar ? 'الأرقام تقديرية بناءً على معدل المبيعات الحالي والوصفات المسجلة' : 'Figures are estimated based on current sales rate and recorded recipes'}
             </div>
           </div>
         )}
@@ -1079,8 +1103,8 @@ function FinanceTab() {
         {tab === 'channels' && (
           <div className="space-y-3">
             <div className="bg-jumar-brown text-white rounded-2xl p-4 text-center">
-              <p className="text-xs text-white/60 mb-1">إجمالي الإيرادات</p>
-              <p className="text-3xl font-bold text-jumar-gold">{fmt(totalRevenue)} ج</p>
+              <p className="text-xs text-white/60 mb-1">{ar ? 'إجمالي الإيرادات' : 'Total Revenue'}</p>
+              <p className="text-3xl font-bold text-jumar-gold">{fmt(totalRevenue)} {cur}</p>
             </div>
             {channelEntries.map(([channel, data]) => {
               const pct = totalRevenue > 0 ? (data.revenue / totalRevenue * 100) : 0
@@ -1093,15 +1117,15 @@ function FinanceTab() {
                 <div key={channel} className="bg-white rounded-2xl p-4 shadow-sm">
                   <div className="flex justify-between items-center mb-2">
                     <p className="font-bold text-jumar-brown text-lg">{channel}</p>
-                    <p className="text-xl font-bold text-green-600">{fmt(data.revenue)} ج</p>
+                    <p className="text-xl font-bold text-green-600">{fmt(data.revenue)} {cur}</p>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-2 mb-3">
                     <div className="bg-jumar-gold h-2 rounded-full" style={{ width: `${pct}%` }} />
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="bg-gray-50 rounded-lg p-3 flex flex-col gap-1"><p className="text-xs text-gray-400 leading-snug">من الإيرادات</p><p className="text-base font-bold text-gray-700">{fmtPct(pct)}</p></div>
-                    <div className="bg-gray-50 rounded-lg p-3 flex flex-col gap-1"><p className="text-xs text-gray-400 leading-snug">متوسط البيعة</p><p className="text-base font-bold text-gray-700">{fmt(avg)} ج</p></div>
-                    <div className={`rounded-lg p-3 flex flex-col gap-1 ${estMargin >= 0 ? 'bg-green-50' : 'bg-red-50'}`}><p className="text-xs text-gray-400 leading-snug">هامش تقديري</p><p className={`text-base font-bold ${estMargin >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmtPct(estMargin)}</p></div>
+                    <div className="bg-gray-50 rounded-lg p-3 flex flex-col gap-1"><p className="text-xs text-gray-400 leading-snug">{ar ? 'من الإيرادات' : 'Of Revenue'}</p><p className="text-base font-bold text-gray-700">{fmtPct(pct)}</p></div>
+                    <div className="bg-gray-50 rounded-lg p-3 flex flex-col gap-1"><p className="text-xs text-gray-400 leading-snug">{ar ? 'متوسط البيعة' : 'Avg Sale'}</p><p className="text-base font-bold text-gray-700">{fmt(avg)} {cur}</p></div>
+                    <div className={`rounded-lg p-3 flex flex-col gap-1 ${estMargin >= 0 ? 'bg-green-50' : 'bg-red-50'}`}><p className="text-xs text-gray-400 leading-snug">{ar ? 'هامش تقديري' : 'Est Margin'}</p><p className={`text-base font-bold ${estMargin >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmtPct(estMargin)}</p></div>
                   </div>
                 </div>
               )
@@ -1113,24 +1137,24 @@ function FinanceTab() {
         {tab === 'customers' && (
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-2">
-              <div className="bg-white rounded-2xl p-3 shadow-sm text-center flex flex-col gap-1"><p className="text-xs text-gray-400 leading-snug">إجمالي عملاء</p><p className="text-xl font-bold text-jumar-brown">{Object.keys(customerOrders).length}</p></div>
-              <div className="bg-white rounded-2xl p-3 shadow-sm text-center flex flex-col gap-1"><p className="text-xs text-gray-400 leading-snug">مكررون</p><p className="text-xl font-bold text-green-600">{repeatCustomers.length}</p></div>
-              <div className="bg-white rounded-2xl p-3 shadow-sm text-center flex flex-col gap-1"><p className="text-xs text-gray-400 leading-snug">متوسط الطلب</p><p className="text-xl font-bold text-jumar-gold">{fmt(avgOrderValue)} ج</p></div>
+              <div className="bg-white rounded-2xl p-3 shadow-sm text-center flex flex-col gap-1"><p className="text-xs text-gray-400 leading-snug">{ar ? 'إجمالي عملاء' : 'Total Customers'}</p><p className="text-xl font-bold text-jumar-brown">{Object.keys(customerOrders).length}</p></div>
+              <div className="bg-white rounded-2xl p-3 shadow-sm text-center flex flex-col gap-1"><p className="text-xs text-gray-400 leading-snug">{ar ? 'مكررون' : 'Repeat'}</p><p className="text-xl font-bold text-green-600">{repeatCustomers.length}</p></div>
+              <div className="bg-white rounded-2xl p-3 shadow-sm text-center flex flex-col gap-1"><p className="text-xs text-gray-400 leading-snug">{ar ? 'متوسط الطلب' : 'Avg Order'}</p><p className="text-xl font-bold text-jumar-gold">{fmt(avgOrderValue)} {cur}</p></div>
             </div>
 
             {/* نسبة التكرار */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <p className="text-sm font-bold text-jumar-brown mb-2">نسبة العملاء المكررين</p>
+              <p className="text-sm font-bold text-jumar-brown mb-2">{ar ? 'نسبة العملاء المكررين' : 'Repeat Customer Rate'}</p>
               <div className="w-full bg-gray-100 rounded-full h-3 mb-2">
                 <div className="bg-jumar-gold h-3 rounded-full" style={{ width: `${Object.keys(customerOrders).length > 0 ? (repeatCustomers.length / Object.keys(customerOrders).length * 100) : 0}%` }} />
               </div>
-              <p className="text-xs text-gray-500">{repeatCustomers.length} من {Object.keys(customerOrders).length} عميل ({Object.keys(customerOrders).length > 0 ? fmtPct(repeatCustomers.length / Object.keys(customerOrders).length * 100) : '0%'})</p>
+              <p className="text-xs text-gray-500">{repeatCustomers.length} {ar ? 'من' : 'of'} {Object.keys(customerOrders).length} {ar ? 'عميل' : 'customers'} ({Object.keys(customerOrders).length > 0 ? fmtPct(repeatCustomers.length / Object.keys(customerOrders).length * 100) : '0%'})</p>
             </div>
 
             {/* أكثر المناطق */}
             {topAreas.length > 0 && (
               <div className="bg-white rounded-2xl p-4 shadow-sm">
-                <p className="text-sm font-bold text-jumar-brown mb-3">📍 أكثر المناطق طلباً</p>
+                <p className="text-sm font-bold text-jumar-brown mb-3">📍 {ar ? 'أكثر المناطق طلباً' : 'Top Areas'}</p>
                 <div className="space-y-2">
                   {topAreas.map(([area, count]) => (
                     <div key={area} className="flex items-center gap-3">
@@ -1148,12 +1172,12 @@ function FinanceTab() {
             {/* عملاء مكررون */}
             {repeatCustomers.length > 0 && (
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-gray-100"><p className="font-bold text-jumar-brown">⭐ عملاء مكررون</p></div>
+                <div className="p-4 border-b border-gray-100"><p className="font-bold text-jumar-brown">⭐ {ar ? 'عملاء مكررون' : 'Repeat Customers'}</p></div>
                 <div className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
                   {repeatCustomers.sort((a,b) => b.count - a.count).slice(0,10).map((c, i) => (
                     <div key={i} className="p-3 flex justify-between items-center">
                       <div><p className="text-sm font-semibold text-gray-800">{c.name}</p><p className="text-xs text-gray-400">{c.area}</p></div>
-                      <div className="text-left"><span className="text-jumar-brown font-bold">{c.count} طلبات</span><p className="text-xs text-green-600">{fmt(c.total)} ج</p></div>
+                      <div className="text-left"><span className="text-jumar-brown font-bold">{c.count} {ar ? 'طلبات' : 'orders'}</span><p className="text-xs text-green-600">{fmt(c.total)} {cur}</p></div>
                     </div>
                   ))}
                 </div>
@@ -1167,7 +1191,7 @@ function FinanceTab() {
           <div className="space-y-3">
             {/* بطاقة ROI الرئيسية */}
             <div className={`rounded-2xl p-5 text-center ${bazaarROI !== null && bazaarROI < 0 ? 'bg-red-600' : 'bg-jumar-brown'}`}>
-              <p className="text-sm text-white/70 mb-1">العائد على الاستثمار</p>
+              <p className="text-sm text-white/70 mb-1">{ar ? 'العائد على الاستثمار' : 'Return on Investment'}</p>
               <p className="text-5xl font-bold text-white mb-2">
                 {bazaarROI !== null ? `${bazaarROI.toFixed(0)}%` : '—'}
               </p>
@@ -1177,16 +1201,16 @@ function FinanceTab() {
                 bazaarROI >= 0 ? 'bg-amber-400/30 text-amber-100' :
                 'bg-white/20 text-white'
               }`}>
-                {bazaarROI === null ? 'لا توجد بيانات' : bazaarROI >= 100 ? '✅ مربح جداً' : bazaarROI >= 0 ? '⚠️ مربح بالكاد' : '❌ خسارة'}
+                {bazaarROI === null ? (ar ? 'لا توجد بيانات' : 'No data') : bazaarROI >= 100 ? (ar ? '✅ مربح جداً' : '✅ Very profitable') : bazaarROI >= 0 ? (ar ? '⚠️ مربح بالكاد' : '⚠️ Barely profitable') : (ar ? '❌ خسارة' : '❌ Loss')}
               </span>
             </div>
 
             {/* تفاصيل */}
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
               {[
-                { label: 'إيراد البازار', value: fmt(bazaarRevenue) + ' ج', color: 'text-green-600' },
-                { label: 'تكلفة المشاركة', value: '−' + fmt(bazaarCost) + ' ج', color: 'text-red-500' },
-                { label: 'تكلفة البضاعة (COGS)', value: '−' + fmt(bazaarRevenue > 0 ? bazaarRevenue * (totalCOGS / (totalRevenue || 1)) : 0) + ' ج', color: 'text-orange-500' },
+                { label: ar ? 'إيراد البازار' : 'Bazaar Revenue', value: fmt(bazaarRevenue) + ' ' + cur, color: 'text-green-600' },
+                { label: ar ? 'تكلفة المشاركة' : 'Participation Cost', value: '−' + fmt(bazaarCost) + ' ' + cur, color: 'text-red-500' },
+                { label: ar ? 'تكلفة البضاعة (COGS)' : 'COGS (est.)', value: '−' + fmt(bazaarRevenue > 0 ? bazaarRevenue * (totalCOGS / (totalRevenue || 1)) : 0) + ' ' + cur, color: 'text-orange-500' },
               ].map((row, i) => (
                 <div key={i} className="flex justify-between items-center px-4 py-3 border-b border-gray-100 last:border-0">
                   <span className="text-sm text-gray-600">{row.label}</span>
@@ -1194,16 +1218,16 @@ function FinanceTab() {
                 </div>
               ))}
               <div className="flex justify-between items-center px-4 py-3 bg-gray-50">
-                <span className="font-bold text-gray-800">صافي ربح البازار</span>
+                <span className="font-bold text-gray-800">{ar ? 'صافي ربح البازار' : 'Bazaar Net Profit'}</span>
                 <span className={`font-bold text-lg ${bazaarProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                  {bazaarProfit >= 0 ? '+' : '−'}{fmt(Math.abs(bazaarProfit))} ج
+                  {bazaarProfit >= 0 ? '+' : '−'}{fmt(Math.abs(bazaarProfit))} {cur}
                 </span>
               </div>
             </div>
 
             {/* نسبة من الإجمالي */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <p className="text-xs text-gray-400 mb-1">البازار من إجمالي الإيرادات</p>
+              <p className="text-xs text-gray-400 mb-1">{ar ? 'البازار من إجمالي الإيرادات' : 'Bazaar share of total revenue'}</p>
               <div className="flex items-center gap-3">
                 <div className="flex-1 bg-gray-100 rounded-full h-2">
                   <div className="h-2 rounded-full bg-jumar-gold" style={{ width: `${totalRevenue > 0 ? Math.min(100, bazaarRevenue / totalRevenue * 100) : 0}%` }} />
@@ -1216,7 +1240,7 @@ function FinanceTab() {
 
             {bazaarCost === 0 && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
-                💡 سجّل رسوم البازار في المصروفات تحت فئة <strong>"رسوم بازار"</strong> عشان يتحسب الـ ROI صح
+                {ar ? <>💡 سجّل رسوم البازار في المصروفات تحت فئة <strong>"رسوم بازار"</strong> عشان يتحسب الـ ROI صح</> : <>💡 Record bazaar fees under <strong>"رسوم بازار"</strong> category in expenses to calculate ROI correctly</>}
               </div>
             )}
           </div>
@@ -1226,22 +1250,22 @@ function FinanceTab() {
         {tab === 'cashflow' && (
           <div className="space-y-3">
             <div className="bg-jumar-brown text-white rounded-2xl p-4">
-              <p className="text-sm text-white/70 mb-1">المركز النقدي الحالي (تقديري)</p>
-              <p className={`text-3xl font-bold ${netProfit >= 0 ? 'text-jumar-gold' : 'text-red-300'}`}>{netProfit >= 0 ? '+' : ''}{fmt(netProfit)} ج</p>
-              <p className="text-xs text-white/50 mt-1">إيرادات − مصروفات − COGS − هدر</p>
+              <p className="text-sm text-white/70 mb-1">{ar ? 'المركز النقدي الحالي (تقديري)' : 'Current Cash Position (est.)'}</p>
+              <p className={`text-3xl font-bold ${netProfit >= 0 ? 'text-jumar-gold' : 'text-red-300'}`}>{netProfit >= 0 ? '+' : ''}{fmt(netProfit)} {cur}</p>
+              <p className="text-xs text-white/50 mt-1">{ar ? 'إيرادات − مصروفات − COGS − هدر' : 'Revenue − Expenses − COGS − Gifts'}</p>
             </div>
 
             {/* مصاريف ثابتة vs متغيرة */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <p className="font-bold text-jumar-brown mb-3">📊 تحليل المصروفات</p>
+              <p className="font-bold text-jumar-brown mb-3">📊 {ar ? 'تحليل المصروفات' : 'Expense Breakdown'}</p>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div className="bg-red-50 rounded-xl p-4 text-center min-h-[80px] flex flex-col justify-center gap-1">
-                  <p className="text-xs text-red-600 leading-snug">مصاريف ثابتة</p>
-                  <p className="text-xl font-bold text-red-600">{fmt(fixedExpenses)} ج</p>
+                  <p className="text-xs text-red-600 leading-snug">{ar ? 'مصاريف ثابتة' : 'Fixed Expenses'}</p>
+                  <p className="text-xl font-bold text-red-600">{fmt(fixedExpenses)} {cur}</p>
                 </div>
                 <div className="bg-orange-50 rounded-xl p-4 text-center min-h-[80px] flex flex-col justify-center gap-1">
-                  <p className="text-xs text-orange-600 leading-snug">مصاريف متغيرة</p>
-                  <p className="text-xl font-bold text-orange-600">{fmt(totalOpex - fixedExpenses)} ج</p>
+                  <p className="text-xs text-orange-600 leading-snug">{ar ? 'مصاريف متغيرة' : 'Variable Expenses'}</p>
+                  <p className="text-xl font-bold text-orange-600">{fmt(totalOpex - fixedExpenses)} {cur}</p>
                 </div>
               </div>
               <div className="space-y-1">
@@ -1256,7 +1280,7 @@ function FinanceTab() {
                       <div className="flex-1 bg-gray-100 rounded-full h-1.5">
                         <div className={`h-1.5 rounded-full ${isFixed ? 'bg-red-400' : 'bg-orange-400'}`} style={{ width: `${pct}%` }} />
                       </div>
-                      <span className="text-xs font-bold text-gray-700 w-16 text-left">{fmt(total)} ج</span>
+                      <span className="text-xs font-bold text-gray-700 w-16 text-left">{fmt(total)} {cur}</span>
                     </div>
                   )
                 })}
@@ -1266,15 +1290,15 @@ function FinanceTab() {
             {/* معدل حرق الكاش */}
             {cashBurnMonths !== null && (
               <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
-                <p className="text-sm font-bold text-red-700 mb-1">🔥 معدل حرق الكاش</p>
-                <p className="text-2xl font-bold text-red-600">{cashBurnMonths.toFixed(1)} شهر</p>
-                <p className="text-xs text-red-500">يكفي الكاش الحالي للمصاريف الثابتة لو توقفت المبيعات</p>
+                <p className="text-sm font-bold text-red-700 mb-1">🔥 {ar ? 'معدل حرق الكاش' : 'Cash Burn Rate'}</p>
+                <p className="text-2xl font-bold text-red-600">{cashBurnMonths.toFixed(1)} {ar ? 'شهر' : 'months'}</p>
+                <p className="text-xs text-red-500">{ar ? 'يكفي الكاش الحالي للمصاريف الثابتة لو توقفت المبيعات' : 'Current cash covers fixed expenses if sales stop'}</p>
               </div>
             )}
             {cashBurnMonths === null && netProfit >= 0 && (
               <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
-                <p className="text-green-700 font-bold">✅ المشروع يغطي مصاريفه</p>
-                <p className="text-xs text-green-600 mt-1">مفيش حرق كاش</p>
+                <p className="text-green-700 font-bold">✅ {ar ? 'المشروع يغطي مصاريفه' : 'Business covers its expenses'}</p>
+                <p className="text-xs text-green-600 mt-1">{ar ? 'مفيش حرق كاش' : 'No cash burn'}</p>
               </div>
             )}
           </div>
@@ -1284,14 +1308,14 @@ function FinanceTab() {
         {tab === 'sales' && (
           <>
             <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <h2 className="font-bold text-jumar-brown mb-3">➕ تسجيل بيعة جديدة</h2>
+              <h2 className="font-bold text-jumar-brown mb-3">➕ {ar ? 'تسجيل بيعة جديدة' : 'Record New Sale'}</h2>
               <form onSubmit={saveSale} className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-xs text-gray-500 block mb-1">التاريخ</label><input type="date" required value={saleForm.sale_date} onChange={e => setSaleForm({...saleForm, sale_date: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" /></div>
-                  <div><label className="text-xs text-gray-500 block mb-1">القناة</label><select value={saleForm.channel} onChange={e => setSaleForm({...saleForm, channel: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold">{CHANNELS.map(c => <option key={c}>{c}</option>)}</select></div>
+                  <div><label className="text-xs text-gray-500 block mb-1">{ar ? 'التاريخ' : 'Date'}</label><input type="date" required value={saleForm.sale_date} onChange={e => setSaleForm({...saleForm, sale_date: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" /></div>
+                  <div><label className="text-xs text-gray-500 block mb-1">{ar ? 'القناة' : 'Channel'}</label><select value={saleForm.channel} onChange={e => setSaleForm({...saleForm, channel: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold">{CHANNELS.map(c => <option key={c}>{c}</option>)}</select></div>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">الكميات (اختياري)</label>
+                  <label className="text-xs text-gray-500 block mb-1">{ar ? 'الكميات (اختياري)' : 'Quantities (optional)'}</label>
                   <div className="grid grid-cols-5 gap-1 text-center text-xs">
                     {[['qty_tamriya','ت'],['qty_fudge','ف'],['qty_sultana','س'],['qty_snickers_fool','سف'],['qty_snickers_bunduq','سب']].map(([key, label]) => (
                       <div key={key}><p className="text-gray-400 mb-1">{label}</p><input type="number" min="0" value={(saleForm as any)[key]} onChange={e => setSaleForm({...saleForm, [key]: Number(e.target.value)})} className="w-full border border-gray-200 rounded-lg px-1 py-1.5 text-center text-sm focus:outline-none focus:border-jumar-gold" /></div>
@@ -1299,21 +1323,21 @@ function FinanceTab() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-xs text-gray-500 block mb-1">المبلغ (ج) *</label><input type="number" required min="1" placeholder="0" value={saleForm.amount} onChange={e => setSaleForm({...saleForm, amount: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" /></div>
-                  <div><label className="text-xs text-gray-500 block mb-1">نوع العميل</label><select value={saleForm.customer_type} onChange={e => setSaleForm({...saleForm, customer_type: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold">{['غريب','قريب/معرفة','متنوع','غير محدد'].map(c => <option key={c}>{c}</option>)}</select></div>
+                  <div><label className="text-xs text-gray-500 block mb-1">{ar ? 'المبلغ (ج) *' : 'Amount (EGP) *'}</label><input type="number" required min="1" placeholder="0" value={saleForm.amount} onChange={e => setSaleForm({...saleForm, amount: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" /></div>
+                  <div><label className="text-xs text-gray-500 block mb-1">{ar ? 'نوع العميل' : 'Customer Type'}</label><select value={saleForm.customer_type} onChange={e => setSaleForm({...saleForm, customer_type: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold">{['غريب','قريب/معرفة','متنوع','غير محدد'].map(c => <option key={c}>{c}</option>)}</select></div>
                 </div>
-                <input placeholder="وصف الصنف" value={saleForm.items_desc} onChange={e => setSaleForm({...saleForm, items_desc: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" />
+                <input placeholder={ar ? 'وصف الصنف' : 'Item description'} value={saleForm.items_desc} onChange={e => setSaleForm({...saleForm, items_desc: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" />
                 {msg && <p className={`text-sm text-center ${msg.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>{msg}</p>}
-                <button type="submit" disabled={saving} className="w-full bg-jumar-brown text-white font-bold py-3 rounded-xl hover:opacity-90 disabled:opacity-50">{saving ? 'جارٍ الحفظ...' : '💾 سجّل البيعة'}</button>
+                <button type="submit" disabled={saving} className="w-full bg-jumar-brown text-white font-bold py-3 rounded-xl hover:opacity-90 disabled:opacity-50">{saving ? (ar ? 'جارٍ الحفظ...' : 'Saving...') : (ar ? '💾 سجّل البيعة' : '💾 Save Sale')}</button>
               </form>
             </div>
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="p-4 border-b border-gray-100 flex justify-between items-center"><h2 className="font-bold text-jumar-brown">📋 سجل المبيعات ({sales.length})</h2><span className="text-green-600 font-bold text-sm">{fmt(sales.reduce((s, r) => s + Number(r.amount), 0))} ج</span></div>
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center"><h2 className="font-bold text-jumar-brown">📋 {ar ? `سجل المبيعات (${sales.length})` : `Sales Log (${sales.length})`}</h2><span className="text-green-600 font-bold text-sm">{fmt(sales.reduce((s, r) => s + Number(r.amount), 0))} {cur}</span></div>
               <div className="divide-y divide-gray-50 max-h-96 overflow-y-auto">
                 {sales.map(s => (
                   <div key={s.id} className="p-3 flex justify-between items-start">
                     <div className="text-right"><div className="flex items-center gap-2"><span className="text-xs bg-jumar-gold/20 text-jumar-brown px-2 py-0.5 rounded-full">{s.channel}</span><span className="text-xs text-gray-400">{s.sale_date}</span></div>{s.items_desc && <p className="text-xs text-gray-500 mt-0.5">{s.items_desc}</p>}</div>
-                    <span className="font-bold text-green-600 text-sm whitespace-nowrap mr-2">{fmt(Number(s.amount))} ج</span>
+                    <span className="font-bold text-green-600 text-sm whitespace-nowrap mr-2">{fmt(Number(s.amount))} {cur}</span>
                   </div>
                 ))}
               </div>
@@ -1325,21 +1349,21 @@ function FinanceTab() {
         {tab === 'expenses' && (
           <>
             <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <h2 className="font-bold text-jumar-brown mb-3">➕ تسجيل مصروف جديد</h2>
+              <h2 className="font-bold text-jumar-brown mb-3">➕ {ar ? 'تسجيل مصروف جديد' : 'Record New Expense'}</h2>
               <form onSubmit={saveExpense} className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-xs text-gray-500 block mb-1">التاريخ</label><input type="date" required value={expenseForm.expense_date} onChange={e => setExpenseForm({...expenseForm, expense_date: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" /></div>
-                  <div><label className="text-xs text-gray-500 block mb-1">الفئة</label><select value={expenseForm.category} onChange={e => setExpenseForm({...expenseForm, category: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold">{EXPENSE_CATEGORIES.map(c => <option key={c}>{c}</option>)}</select></div>
+                  <div><label className="text-xs text-gray-500 block mb-1">{ar ? 'التاريخ' : 'Date'}</label><input type="date" required value={expenseForm.expense_date} onChange={e => setExpenseForm({...expenseForm, expense_date: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" /></div>
+                  <div><label className="text-xs text-gray-500 block mb-1">{ar ? 'الفئة' : 'Category'}</label><select value={expenseForm.category} onChange={e => setExpenseForm({...expenseForm, category: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold">{EXPENSE_CATEGORIES.map(c => <option key={c}>{c}</option>)}</select></div>
                 </div>
-                <input required placeholder="الوصف *" value={expenseForm.description} onChange={e => setExpenseForm({...expenseForm, description: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" />
-                <input type="number" required min="1" placeholder="المبلغ (ج) *" value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" />
-                <input placeholder="ملاحظات" value={expenseForm.notes} onChange={e => setExpenseForm({...expenseForm, notes: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" />
+                <input required placeholder={ar ? 'الوصف *' : 'Description *'} value={expenseForm.description} onChange={e => setExpenseForm({...expenseForm, description: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" />
+                <input type="number" required min="1" placeholder={ar ? 'المبلغ (ج) *' : 'Amount (EGP) *'} value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" />
+                <input placeholder={ar ? 'ملاحظات' : 'Notes'} value={expenseForm.notes} onChange={e => setExpenseForm({...expenseForm, notes: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" />
                 {msg && <p className={`text-sm text-center ${msg.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>{msg}</p>}
-                <button type="submit" disabled={saving} className="w-full bg-jumar-brown text-white font-bold py-3 rounded-xl hover:opacity-90 disabled:opacity-50">{saving ? 'جارٍ الحفظ...' : '💾 سجّل المصروف'}</button>
+                <button type="submit" disabled={saving} className="w-full bg-jumar-brown text-white font-bold py-3 rounded-xl hover:opacity-90 disabled:opacity-50">{saving ? (ar ? 'جارٍ الحفظ...' : 'Saving...') : (ar ? '💾 سجّل المصروف' : '💾 Save Expense')}</button>
               </form>
             </div>
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="p-4 border-b border-gray-100"><h2 className="font-bold text-jumar-brown">📊 حسب الفئة</h2></div>
+              <div className="p-4 border-b border-gray-100"><h2 className="font-bold text-jumar-brown">📊 {ar ? 'حسب الفئة' : 'By Category'}</h2></div>
               <div className="divide-y divide-gray-50">
                 {EXPENSE_CATEGORIES.map(cat => {
                   const total = expenses.filter(e => e.category === cat).reduce((s, e) => s + Number(e.amount), 0)
@@ -1365,7 +1389,8 @@ function FinanceTab() {
 // ══════════════════════════════════════════════════════════════════════════════
 // BAZAAR TAB
 // ══════════════════════════════════════════════════════════════════════════════
-function BazaarTab() {
+function BazaarTab({ lang }: { lang: Lang }) {
+  const ar = lang === 'ar'
   const [today, setToday] = useState(BAZAAR_DATES[0])
   const [todayTotal, setTodayTotal] = useState(0)
   const [todayCount, setTodayCount] = useState(0)
@@ -1422,14 +1447,16 @@ function BazaarTab() {
       amount: item.price, customer_type: 'غريب', notes: `qty:${item.qty}|gift:${item.gift}|بازار لوتس أكتوبر 2026`,
     }).select('id').single()
     if (data?.id) setLastSaleId(data.id)
-    setLastSale(`${item.label} — ${item.price}ج ✅`)
+    setLastSale(`${item.label} — ${item.price}${ar ? 'ج' : ' EGP'} ✅`)
     await loadSummary(); setLoading(false)
     setTimeout(() => { setLastSale(null); setLastSaleId(null) }, 8000)
   }
 
+  const cur = ar ? 'ج' : 'EGP'
+  const fmt = (n: number) => n.toLocaleString(ar ? 'ar-EG' : 'en-US')
   return (
-    <div className="max-w-lg mx-auto p-4 space-y-4">
-      <div className="flex items-center justify-between"><h2 className="text-xl font-bold text-jumar-brown">🏪 بازار لوتس</h2><p className="text-xs text-gray-400">٢٢-٢٤ أكتوبر ٢٠٢٦</p></div>
+    <div className="max-w-lg mx-auto p-4 space-y-4" dir={ar ? 'rtl' : 'ltr'}>
+      <div className="flex items-center justify-between"><h2 className="text-xl font-bold text-jumar-brown">🏪 {ar ? 'بازار لوتس' : 'Lotus Bazaar'}</h2><p className="text-xs text-gray-400">{ar ? '٢٢-٢٤ أكتوبر ٢٠٢٦' : '22-24 Oct 2026'}</p></div>
       <div className="grid grid-cols-3 gap-2">
         {BAZAAR_DATES.map(date => (
           <button key={date} onClick={() => switchDay(date)} className={`py-2 rounded-xl text-sm font-bold transition-all ${today === date ? 'bg-jumar-brown text-white' : 'bg-white text-gray-600 border border-gray-200'}`}>{dayLabel(date)}</button>
@@ -1437,53 +1464,53 @@ function BazaarTab() {
       </div>
       <div className="bg-jumar-brown text-white rounded-2xl p-4">
         <div className="flex justify-between items-start mb-3">
-          <div><p className="text-xs text-white/60 mb-1">{dayLabel(today)} — إيرادات</p><p className="text-3xl font-bold text-jumar-gold">{todayTotal.toLocaleString('ar-EG')} ج</p></div>
-          <div className="text-left"><p className="text-xs text-white/60 mb-1">إجمالي البازار</p><p className="text-xl font-bold">{grandTotal.toLocaleString('ar-EG')} ج</p></div>
+          <div><p className="text-xs text-white/60 mb-1">{dayLabel(today)} — {ar ? 'إيرادات' : 'Revenue'}</p><p className="text-3xl font-bold text-jumar-gold">{fmt(todayTotal)} {cur}</p></div>
+          <div className={ar ? 'text-left' : 'text-right'}><p className="text-xs text-white/60 mb-1">{ar ? 'إجمالي البازار' : 'Bazaar Total'}</p><p className="text-xl font-bold">{fmt(grandTotal)} {cur}</p></div>
         </div>
         <div className="flex gap-4 border-t border-white/20 pt-3">
-          <div className="text-center flex-1"><p className="text-2xl font-bold text-jumar-gold">{todaySold}</p><p className="text-xs text-white/60">مباع اليوم</p></div>
-          <div className="text-center flex-1"><p className="text-2xl font-bold text-white/80">{todayGifts}</p><p className="text-xs text-white/60">هدايا اليوم</p></div>
-          <div className="text-center flex-1"><p className="text-2xl font-bold text-jumar-gold">{grandSold}</p><p className="text-xs text-white/60">إجمالي مباع</p></div>
-          <div className="text-center flex-1"><p className="text-2xl font-bold text-white/80">{grandGifts}</p><p className="text-xs text-white/60">إجمالي هدايا</p></div>
+          <div className="text-center flex-1"><p className="text-2xl font-bold text-jumar-gold">{todaySold}</p><p className="text-xs text-white/60">{ar ? 'مباع اليوم' : "Today's Sold"}</p></div>
+          <div className="text-center flex-1"><p className="text-2xl font-bold text-white/80">{todayGifts}</p><p className="text-xs text-white/60">{ar ? 'هدايا اليوم' : "Today's Gifts"}</p></div>
+          <div className="text-center flex-1"><p className="text-2xl font-bold text-jumar-gold">{grandSold}</p><p className="text-xs text-white/60">{ar ? 'إجمالي مباع' : 'Total Sold'}</p></div>
+          <div className="text-center flex-1"><p className="text-2xl font-bold text-white/80">{grandGifts}</p><p className="text-xs text-white/60">{ar ? 'إجمالي هدايا' : 'Total Gifts'}</p></div>
         </div>
       </div>
       {lastSale && (
         <div className="bg-green-100 text-green-700 rounded-xl p-3 flex items-center justify-between gap-2">
           <span className="font-bold text-sm">{lastSale}</span>
-          {lastSaleId && <button onClick={async () => { await supabase.from('sales').delete().eq('id', lastSaleId); setLastSale(null); setLastSaleId(null); await loadSummary() }} className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-lg hover:bg-red-600 active:scale-95 transition-all whitespace-nowrap">↩ تراجع</button>}
+          {lastSaleId && <button onClick={async () => { await supabase.from('sales').delete().eq('id', lastSaleId); setLastSale(null); setLastSaleId(null); await loadSummary() }} className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-lg hover:bg-red-600 active:scale-95 transition-all whitespace-nowrap">↩ {ar ? 'تراجع' : 'Undo'}</button>}
         </div>
       )}
       <div className="bg-white rounded-2xl p-4 shadow-sm">
-        <h2 className="font-bold text-jumar-brown mb-3 text-center">اضغط للتسجيل الفوري</h2>
+        <h2 className="font-bold text-jumar-brown mb-3 text-center">{ar ? 'اضغط للتسجيل الفوري' : 'Tap to Record Sale'}</h2>
         <div className="grid grid-cols-2 gap-3">
           {BAZAAR_ITEMS.map((item, i) => (
             <button key={i} onClick={() => recordSale(item)} disabled={loading} className="bg-jumar-cream border-2 border-jumar-gold/30 hover:border-jumar-gold hover:bg-jumar-gold/10 active:scale-95 transition-all rounded-2xl p-4 text-center disabled:opacity-50">
               <p className="text-lg font-bold text-jumar-brown">{item.label}</p>
-              {item.gift > 0 && <p className="text-xs text-jumar-gold">+{item.gift} هدية</p>}
+              {item.gift > 0 && <p className="text-xs text-jumar-gold">+{item.gift} {ar ? 'هدية' : 'gift'}</p>}
               <p className="text-2xl font-bold text-jumar-gold mt-1">{item.price}</p>
-              <p className="text-xs text-gray-400">جنيه</p>
+              <p className="text-xs text-gray-400">{ar ? 'جنيه' : 'EGP'}</p>
             </button>
           ))}
         </div>
       </div>
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100"><h2 className="font-bold text-jumar-brown">📊 ملخص الأيام</h2></div>
+        <div className="p-4 border-b border-gray-100"><h2 className="font-bold text-jumar-brown">📊 {ar ? 'ملخص الأيام' : 'Day Summary'}</h2></div>
         <div className="divide-y divide-gray-50">
           {daySummaries.map(s => (
             <div key={s.date} className="p-3">
-              <div className="flex justify-between items-center mb-1"><p className="font-semibold text-gray-700">{dayLabel(s.date)}</p><p className={`font-bold text-lg ${s.total > 0 ? 'text-green-600' : 'text-gray-300'}`}>{s.total > 0 ? `${s.total.toLocaleString('ar-EG')} ج` : '—'}</p></div>
-              {s.total > 0 && <div className="flex gap-3 text-xs text-gray-500"><span>مباع: <span className="font-bold text-jumar-brown">{s.soldQty}</span></span><span>هدايا: <span className="font-bold text-gray-400">{s.giftQty}</span></span><span>بيعات: <span className="font-bold">{s.count}</span></span></div>}
+              <div className="flex justify-between items-center mb-1"><p className="font-semibold text-gray-700">{dayLabel(s.date)}</p><p className={`font-bold text-lg ${s.total > 0 ? 'text-green-600' : 'text-gray-300'}`}>{s.total > 0 ? `${fmt(s.total)} ${cur}` : '—'}</p></div>
+              {s.total > 0 && <div className="flex gap-3 text-xs text-gray-500"><span>{ar ? 'مباع' : 'Sold'}: <span className="font-bold text-jumar-brown">{s.soldQty}</span></span><span>{ar ? 'هدايا' : 'Gifts'}: <span className="font-bold text-gray-400">{s.giftQty}</span></span><span>{ar ? 'بيعات' : 'Sales'}: <span className="font-bold">{s.count}</span></span></div>}
             </div>
           ))}
           <div className="p-3 bg-jumar-cream">
-            <div className="flex justify-between items-center mb-1"><p className="font-bold text-jumar-brown">الإجمالي</p><p className="font-bold text-xl text-jumar-brown">{grandTotal.toLocaleString('ar-EG')} ج</p></div>
-            <div className="flex gap-3 text-xs text-gray-500"><span>مباع: <span className="font-bold text-jumar-brown">{grandSold}</span></span><span>هدايا: <span className="font-bold">{grandGifts}</span></span></div>
+            <div className="flex justify-between items-center mb-1"><p className="font-bold text-jumar-brown">{ar ? 'الإجمالي' : 'Total'}</p><p className="font-bold text-xl text-jumar-brown">{fmt(grandTotal)} {cur}</p></div>
+            <div className="flex gap-3 text-xs text-gray-500"><span>{ar ? 'مباع' : 'Sold'}: <span className="font-bold text-jumar-brown">{grandSold}</span></span><span>{ar ? 'هدايا' : 'Gifts'}: <span className="font-bold">{grandGifts}</span></span></div>
           </div>
         </div>
       </div>
       <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-center">
-        <p className="text-sm text-amber-800 font-semibold">🎯 الهدف: 198 قطعة مباعة (66/يوم) للـ break-even</p>
-        <p className="text-xs text-amber-600 mt-1">وصلت: {grandSold} من 198 ({Math.round(grandSold/198*100)}%)</p>
+        <p className="text-sm text-amber-800 font-semibold">🎯 {ar ? 'الهدف: 198 قطعة مباعة (66/يوم) للـ break-even' : 'Goal: 198 pieces sold (66/day) to break-even'}</p>
+        <p className="text-xs text-amber-600 mt-1">{ar ? `وصلت: ${grandSold} من 198 (${Math.round(grandSold/198*100)}%)` : `Reached: ${grandSold} of 198 (${Math.round(grandSold/198*100)}%)`}</p>
       </div>
     </div>
   )
@@ -1492,7 +1519,8 @@ function BazaarTab() {
 // ══════════════════════════════════════════════════════════════════════════════
 // ANALYTICS TAB  (أكثر المنتجات مبيعاً + معدل التحويل)
 // ══════════════════════════════════════════════════════════════════════════════
-function AnalyticsTab() {
+function AnalyticsTab({ lang }: { lang: Lang }) {
+  const ar = lang === 'ar'
   const [sales, setSales] = useState<Sale[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
@@ -1510,7 +1538,10 @@ function AnalyticsTab() {
     load()
   }, [])
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">جارٍ التحميل...</div>
+  const cur = ar ? 'ج' : 'EGP'
+  const fmt = (n: number) => n.toLocaleString(ar ? 'ar-EG' : 'en-US')
+
+  if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">{ar ? 'جارٍ التحميل...' : 'Loading...'}</div>
 
   // أكثر المنتجات مبيعاً من order_items
   const productCount: Record<string, number> = {}
@@ -1552,33 +1583,33 @@ function AnalyticsTab() {
   const dailyAvg = Object.keys(byDate).length > 0 ? Math.round(Object.values(byDate).reduce((s,v) => s+v, 0) / Object.keys(byDate).length) : 0
 
   return (
-    <div className="max-w-2xl mx-auto p-4 space-y-4">
-      <h2 className="text-xl font-bold text-jumar-brown">📊 التحليلات</h2>
+    <div className="max-w-2xl mx-auto p-4 space-y-4" dir={ar ? 'rtl' : 'ltr'}>
+      <h2 className="text-xl font-bold text-jumar-brown">📊 {ar ? 'التحليلات' : 'Analytics'}</h2>
 
       {/* معدل التحويل */}
       <div className="bg-white rounded-2xl p-4 shadow-sm">
-        <h3 className="font-bold text-jumar-brown mb-3">🎯 معدل التحويل (الطلبات الأونلاين)</h3>
+        <h3 className="font-bold text-jumar-brown mb-3">🎯 {ar ? 'معدل التحويل (الطلبات الأونلاين)' : 'Conversion Rate (Online Orders)'}</h3>
         <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="text-center bg-gray-50 rounded-xl p-3"><p className="text-2xl font-bold text-jumar-brown">{total}</p><p className="text-xs text-gray-500">إجمالي الطلبات</p></div>
-          <div className="text-center bg-green-50 rounded-xl p-3"><p className="text-2xl font-bold text-green-600">{delivered}</p><p className="text-xs text-gray-500">تم توصيله</p></div>
-          <div className="text-center bg-red-50 rounded-xl p-3"><p className="text-2xl font-bold text-red-500">{cancelled}</p><p className="text-xs text-gray-500">ملغي</p></div>
+          <div className="text-center bg-gray-50 rounded-xl p-3"><p className="text-2xl font-bold text-jumar-brown">{total}</p><p className="text-xs text-gray-500">{ar ? 'إجمالي الطلبات' : 'Total Orders'}</p></div>
+          <div className="text-center bg-green-50 rounded-xl p-3"><p className="text-2xl font-bold text-green-600">{delivered}</p><p className="text-xs text-gray-500">{ar ? 'تم توصيله' : 'Delivered'}</p></div>
+          <div className="text-center bg-red-50 rounded-xl p-3"><p className="text-2xl font-bold text-red-500">{cancelled}</p><p className="text-xs text-gray-500">{ar ? 'ملغي' : 'Cancelled'}</p></div>
         </div>
         <div className="bg-jumar-cream rounded-xl p-3">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-semibold text-jumar-brown">معدل الإتمام</span>
+            <span className="text-sm font-semibold text-jumar-brown">{ar ? 'معدل الإتمام' : 'Completion Rate'}</span>
             <span className="text-2xl font-bold text-jumar-brown">{conversionRate}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-3">
             <div className="bg-jumar-gold h-3 rounded-full transition-all" style={{ width: `${conversionRate}%` }} />
           </div>
-          {pending > 0 && <p className="text-xs text-amber-600 mt-2">⏳ {pending} طلب لسه قيد التنفيذ</p>}
+          {pending > 0 && <p className="text-xs text-amber-600 mt-2">⏳ {pending} {ar ? 'طلب لسه قيد التنفيذ' : 'orders still pending'}</p>}
         </div>
       </div>
 
       {/* أكثر المنتجات مبيعاً (من الطلبات) */}
       {topProducts.length > 0 && (
         <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="font-bold text-jumar-brown mb-3">🏆 أكثر المنتجات مبيعاً (طلبات أونلاين)</h3>
+          <h3 className="font-bold text-jumar-brown mb-3">🏆 {ar ? 'أكثر المنتجات مبيعاً (طلبات أونلاين)' : 'Top Products (Online Orders)'}</h3>
           <div className="space-y-2">
             {topProducts.map(([name, count], i) => (
               <div key={name} className="flex items-center gap-3">
@@ -1599,7 +1630,7 @@ function AnalyticsTab() {
       {/* أكثر الفلايفر مبيعاً (من البيعات اليدوية) */}
       {flavorEntries.length > 0 && (
         <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="font-bold text-jumar-brown mb-3">🌟 الفلايفر الأكثر مبيعاً (كل القنوات)</h3>
+          <h3 className="font-bold text-jumar-brown mb-3">🌟 {ar ? 'الفلايفر الأكثر مبيعاً (كل القنوات)' : 'Best-Selling Flavors (All Channels)'}</h3>
           <div className="space-y-2">
             {flavorEntries.map(([name, count], i) => (
               <div key={name} className="flex items-center gap-3">
@@ -1618,14 +1649,14 @@ function AnalyticsTab() {
       {/* قنوات المبيعات */}
       {channelEntries.length > 0 && (
         <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="font-bold text-jumar-brown mb-3">📡 الإيرادات حسب القناة</h3>
+          <h3 className="font-bold text-jumar-brown mb-3">📡 {ar ? 'الإيرادات حسب القناة' : 'Revenue by Channel'}</h3>
           <div className="space-y-2">
             {channelEntries.map(([channel, amount]) => (
               <div key={channel} className="flex items-center gap-3">
                 <span className="text-sm text-gray-700 flex-1">{channel}</span>
                 <div className="flex items-center gap-2">
                   <div className="w-24 bg-gray-100 rounded-full h-2"><div className="bg-jumar-gold h-2 rounded-full" style={{ width: `${(amount / totalRevenue) * 100}%` }} /></div>
-                  <span className="text-sm font-bold text-green-600 w-16 text-left">{amount.toLocaleString('ar-EG')}ج</span>
+                  <span className="text-sm font-bold text-green-600 w-16 text-left">{fmt(amount)} {cur}</span>
                 </div>
               </div>
             ))}
@@ -1636,11 +1667,11 @@ function AnalyticsTab() {
       {/* متوسط اليومي */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-jumar-brown text-white rounded-2xl p-4 text-center">
-          <p className="text-xs text-white/60 mb-1">متوسط المبيعات اليومي</p>
-          <p className="text-2xl font-bold text-jumar-gold">{dailyAvg.toLocaleString('ar-EG')} ج</p>
+          <p className="text-xs text-white/60 mb-1">{ar ? 'متوسط المبيعات اليومي' : 'Daily Sales Avg'}</p>
+          <p className="text-2xl font-bold text-jumar-gold">{fmt(dailyAvg)} {cur}</p>
         </div>
         <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
-          <p className="text-xs text-gray-500 mb-1">أيام نشاط مسجلة</p>
+          <p className="text-xs text-gray-500 mb-1">{ar ? 'أيام نشاط مسجلة' : 'Recorded Active Days'}</p>
           <p className="text-2xl font-bold text-jumar-brown">{Object.keys(byDate).length}</p>
         </div>
       </div>
