@@ -241,6 +241,7 @@ const PRODUCTS = [
 const PRICING = [
   { labelKey: 'piece' as const, qty: 1, gift: 0, price: 40, featured: false },
   { labelKey: 'pieces2' as const, qty: 2, gift: 0, price: 70, featured: false },
+  { labelKey: 'box5' as const, qty: 5, gift: 0, price: 170, featured: false },
   { labelKey: 'box8' as const, qty: 8, gift: 2, price: 260, featured: false },
   { labelKey: 'box15' as const, qty: 15, gift: 3, price: 450, featured: true },
   { labelKey: 'box24' as const, qty: 24, gift: 4, price: 650, featured: false },
@@ -653,8 +654,8 @@ export default function HomePage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {cart.map(item => {
                     const itemName = lang === 'ar' ? item.nameAr
-                      : lang === 'en' ? (item.boxLabelKey === 'box8' ? 'Box of 8' : item.boxLabelKey === 'box15' ? 'Box of 15' : 'Box of 24')
-                      : (item.boxLabelKey === 'box8' ? 'Boîte de 8' : item.boxLabelKey === 'box15' ? 'Boîte de 15' : 'Boîte de 24')
+                      : lang === 'en' ? (item.boxLabelKey === 'pieces2' ? '2 pieces' : item.boxLabelKey === 'box5' ? 'Box of 5' : item.boxLabelKey === 'box8' ? 'Box of 8' : item.boxLabelKey === 'box15' ? 'Box of 15' : 'Box of 24')
+                      : (item.boxLabelKey === 'pieces2' ? '2 pièces' : item.boxLabelKey === 'box5' ? 'Boîte de 5' : item.boxLabelKey === 'box8' ? 'Boîte de 8' : item.boxLabelKey === 'box15' ? 'Boîte de 15' : 'Boîte de 24')
                     return (
                       <div key={item.key} style={{
                         background: '#fff', borderRadius: '1.25rem', padding: '1rem',
