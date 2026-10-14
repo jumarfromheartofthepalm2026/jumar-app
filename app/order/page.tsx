@@ -58,9 +58,6 @@ const t = {
     freeDeliveryBadge: '· توصيل مجاني ✅',
     currency: 'ج',
     PACKAGES: [
-      { label: 'قطعة واحدة', qty: 1, gift: 0, price: 40 },
-      { label: 'قطعتين', qty: 2, gift: 0, price: 70 },
-      { label: 'علبة ٥ قطع', qty: 5, gift: 0, price: 170 },
       { label: 'علبة ٨ قطع', qty: 8, gift: 2, price: 260 },
       { label: 'علبة ١٥ قطعة', qty: 15, gift: 3, price: 450, popular: true },
       { label: 'علبة ٢٤ قطعة', qty: 24, gift: 4, price: 650 },
@@ -113,9 +110,6 @@ const t = {
     freeDeliveryBadge: '· Free delivery ✅',
     currency: 'EGP',
     PACKAGES: [
-      { label: '1 piece', qty: 1, gift: 0, price: 40 },
-      { label: '2 pieces', qty: 2, gift: 0, price: 70 },
-      { label: 'Box of 5', qty: 5, gift: 0, price: 170 },
       { label: 'Box of 8', qty: 8, gift: 2, price: 260 },
       { label: 'Box of 15', qty: 15, gift: 3, price: 450, popular: true },
       { label: 'Box of 24', qty: 24, gift: 4, price: 650 },
@@ -168,9 +162,6 @@ const t = {
     freeDeliveryBadge: '· Livraison gratuite ✅',
     currency: 'EGP',
     PACKAGES: [
-      { label: '1 pièce', qty: 1, gift: 0, price: 40 },
-      { label: '2 pièces', qty: 2, gift: 0, price: 70 },
-      { label: 'Boîte de 5', qty: 5, gift: 0, price: 170 },
       { label: 'Boîte de 8', qty: 8, gift: 2, price: 260 },
       { label: 'Boîte de 15', qty: 15, gift: 3, price: 450, popular: true },
       { label: 'Boîte de 24', qty: 24, gift: 4, price: 650 },
