@@ -318,17 +318,30 @@ function OrdersTab({ lang }: { lang: Lang }) {
                 </div>
               </div>
 
-              {/* أزرار التواصل */}
-              <div className="flex gap-2 flex-wrap">
-                <a href={`https://wa.me/2${(order.customers?.whatsapp || order.customers?.phone || '').replace(/\D/g,'')}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 bg-green-50 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full">
-                  📲 {ar ? 'واتساب العميل' : 'WhatsApp Customer'}
-                </a>
-                <a href={deliveryLink(order)} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full">
-                  🚚 {ar ? 'إرسال للمندوب' : 'Send to Courier'}
-                </a>
+              {/* أزرار التواصل + مسح */}
+              <div className="flex gap-2 flex-wrap items-center justify-between">
+                <div className="flex gap-2 flex-wrap">
+                  <a href={`https://wa.me/2${(order.customers?.whatsapp || order.customers?.phone || '').replace(/\D/g,'')}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 bg-green-50 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+                    📲 {ar ? 'واتساب العميل' : 'WhatsApp Customer'}
+                  </a>
+                  <a href={deliveryLink(order)} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+                    🚚 {ar ? 'إرسال للمندوب' : 'Send to Courier'}
+                  </a>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!confirm(ar ? 'مسح الطلب ده نهائياً؟' : 'Delete this order permanently?')) return
+                    await supabase.from('order_items').delete().eq('order_id', order.id)
+                    await supabase.from('orders').delete().eq('id', order.id)
+                    fetchOrders()
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-full bg-red-50 text-red-500 hover:bg-red-100 font-semibold transition-all whitespace-nowrap"
+                >
+                  🗑️ {ar ? 'مسح' : 'Delete'}
+                </button>
               </div>
             </div>
           ))}
@@ -431,7 +444,13 @@ function InventoryTab({ lang }: { lang: Lang }) {
   async function updateBoxQty(size: number, delta: number) {
     const cur = readyBoxes[size] || 0
     const newQty = Math.max(0, cur + delta)
-    await supabase.from('ready_boxes').update({ qty: newQty }).eq('box_size', size)
+    await supabase.from('ready_boxes').upsert({ box_size: size, qty: newQty }, { onConflict: 'box_size' })
+    setReadyBoxes(prev => ({ ...prev, [size]: newQty }))
+  }
+
+  async function setBoxQtyDirect(size: number, val: number) {
+    const newQty = Math.max(0, val)
+    await supabase.from('ready_boxes').upsert({ box_size: size, qty: newQty }, { onConflict: 'box_size' })
     setReadyBoxes(prev => ({ ...prev, [size]: newQty }))
   }
 
@@ -539,7 +558,7 @@ function InventoryTab({ lang }: { lang: Lang }) {
           {/* ─ علب جاهزة ─ */}
           {tab === 'boxes' && (
             <div className="space-y-3">
-              <p className="text-xs text-gray-400 text-center mb-2">{ar ? 'عدد العلب الجاهزة للبيع — اضغط + / − لتحديث الرقم' : 'Ready boxes for sale — tap + / − to update'}</p>
+              <p className="text-xs text-gray-400 text-center mb-2">{ar ? 'عدد العلب الجاهزة للبيع — اضغط + / − أو اكتب الرقم مباشرة' : 'Ready boxes for sale — tap + / − or type directly'}</p>
               <div className="grid grid-cols-1 gap-3">
                 {BOX_SIZES.map(({ label, pieces }) => {
                   const qty = readyBoxes[pieces] || 0
@@ -549,9 +568,18 @@ function InventoryTab({ lang }: { lang: Lang }) {
                         <p className="font-bold text-jumar-brown text-lg">{label}</p>
                         <p className="text-xs text-gray-400">{pieces} {ar ? 'قطعة' : 'pcs'}</p>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <button onClick={() => updateBoxQty(pieces, -1)} className="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 text-xl font-bold hover:bg-red-50 hover:text-red-600 transition-all">−</button>
-                        <span className={`text-3xl font-bold w-12 text-center ${qty === 0 ? 'text-gray-300' : qty < 3 ? 'text-red-500' : 'text-jumar-brown'}`}>{qty}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={qty}
+                          onChange={e => {
+                            const v = parseInt(e.target.value)
+                            if (!isNaN(v)) setBoxQtyDirect(pieces, v)
+                          }}
+                          className={`w-14 text-center text-2xl font-bold border-2 rounded-xl py-1 focus:outline-none focus:border-jumar-gold ${qty === 0 ? 'text-gray-300 border-gray-100' : qty < 3 ? 'text-red-500 border-red-100' : 'text-jumar-brown border-jumar-gold/30'}`}
+                        />
                         <button onClick={() => updateBoxQty(pieces, 1)} className="w-10 h-10 rounded-xl bg-jumar-brown text-white text-xl font-bold hover:opacity-90 transition-all">+</button>
                       </div>
                     </div>
@@ -1403,6 +1431,7 @@ function BazaarTab({ lang }: { lang: Lang }) {
   const [lastSale, setLastSale] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [lastSaleId, setLastSaleId] = useState<number | null>(null)
+  const [todaySales, setTodaySales] = useState<{ id: number; items_desc: string; amount: number; created_at: string }[]>([])
 
   useEffect(() => {
     const now = new Date().toISOString().split('T')[0]
@@ -1411,6 +1440,9 @@ function BazaarTab({ lang }: { lang: Lang }) {
   }, [])
 
   async function loadSummary(activeDay?: string) {
+    const cur = activeDay || today
+    const { data: salesRows } = await supabase.from('sales').select('id, items_desc, amount, created_at').eq('channel', 'بازار').eq('sale_date', cur).order('created_at', { ascending: false })
+    setTodaySales(salesRows || [])
     const { data } = await supabase.from('sales').select('sale_date, amount, notes').eq('channel', 'بازار').in('sale_date', BAZAAR_DATES)
     if (!data) return
     function parseQty(notes: string) {
@@ -1437,6 +1469,7 @@ function BazaarTab({ lang }: { lang: Lang }) {
     setToday(date)
     const s = daySummaries.find(d => d.date === date)
     if (s) { setTodayTotal(s.total); setTodayCount(s.count); setTodaySold(s.soldQty); setTodayGifts(s.giftQty) }
+    loadSummary(date)
   }
 
   async function recordSale(item: typeof BAZAAR_ITEMS[0]) {
@@ -1493,6 +1526,42 @@ function BazaarTab({ lang }: { lang: Lang }) {
           ))}
         </div>
       </div>
+      {/* سجل مبيعات اليوم مع زر مسح */}
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="font-bold text-jumar-brown">🧾 {ar ? `مبيعات ${dayLabel(today)}` : `${dayLabel(today)} Sales`}</h2>
+          <span className="text-xs text-gray-400">{todaySales.length} {ar ? 'بيعة' : 'sales'}</span>
+        </div>
+        {todaySales.length === 0 ? (
+          <p className="text-center text-gray-300 text-sm py-6">{ar ? 'لا مبيعات بعد' : 'No sales yet'}</p>
+        ) : (
+          <div className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
+            {todaySales.map(s => (
+              <div key={s.id} className="flex items-center justify-between px-4 py-3 gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-800 text-sm truncate">{s.items_desc}</p>
+                  <p className="text-xs text-gray-400">{new Date(s.created_at).toLocaleTimeString(ar ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="font-bold text-jumar-brown text-sm">{s.amount} {ar ? 'ج' : 'EGP'}</span>
+                  <button
+                    onClick={async () => {
+                      if (!confirm(ar ? 'مسح البيعة دي؟' : 'Delete this sale?')) return
+                      await supabase.from('sales').delete().eq('id', s.id)
+                      await loadSummary()
+                    }}
+                    className="text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg p-1.5 transition-all"
+                    title={ar ? 'مسح' : 'Delete'}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         <div className="p-4 border-b border-gray-100"><h2 className="font-bold text-jumar-brown">📊 {ar ? 'ملخص الأيام' : 'Day Summary'}</h2></div>
         <div className="divide-y divide-gray-50">
