@@ -178,6 +178,35 @@ export default function BoardPage() {
   // MoM expense change
   const expenseChange = lastExpenses > 0 ? ((thisExpenses - lastExpenses) / lastExpenses) * 100 : 0
 
+  // ── Q4 Projections ──────────────────────────────────────────────────────────
+  // Use MoM growth rate from last 3 months for smoother projection
+  const growthRates: number[] = []
+  for (let i = 1; i < last3Months.length; i++) {
+    const prev = mRev(last3Months[i-1])
+    const curr = mRev(last3Months[i])
+    if (prev > 0) growthRates.push((curr - prev) / prev)
+  }
+  if (lastRevenue > 0 && thisRevenue > 0) growthRates.push((thisRevenue - lastRevenue) / lastRevenue)
+  const smoothGrowthRate = growthRates.length > 0
+    ? growthRates.reduce((s,r) => s+r, 0) / growthRates.length
+    : 0.1 // assume 10% if no data
+
+  // Project next 3 months from thisRevenue
+  const projMonths = [1, 2, 3].map(offset => {
+    const d = new Date(now.getFullYear(), now.getMonth() + offset, 1)
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+    const projRev = thisRevenue * Math.pow(1 + smoothGrowthRate, offset)
+    const projExp = avgMonthlyBurn // assume expenses stay flat
+    return { key, label: monthLabel(key), projRev, projExp, projNet: projRev - projExp }
+  })
+
+  // Cumulative cash position projection
+  let cumulativeCash = netPosition
+  const cashProjection = projMonths.map(m => {
+    cumulativeCash += m.projNet
+    return { ...m, cumCash: cumulativeCash }
+  })
+
   // Revenue chart
   const maxRev = Math.max(...monthly.map(m => m.revenue), 1)
   const revPts = monthly.map((m,i) => ({
@@ -349,6 +378,139 @@ export default function BoardPage() {
             <div className="pt-1 border-t border-[#F0E8DC]">
               <p className="text-xs text-gray-400">Avg revenue/month</p>
               <p className="text-sm font-bold text-[#7C4A00]">{fmtEGP(avgMonthlyRevenue)}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Q4 Outlook ── */}
+        <SectionLabel>Q4 Outlook &amp; Action Plan</SectionLabel>
+
+        {/* Projection note */}
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 text-xs text-amber-700 flex items-center gap-2">
+          <span>📊</span>
+          <span>Projections based on {(smoothGrowthRate * 100).toFixed(1)}% avg MoM revenue growth · Expenses held flat at {fmtEGP(avgMonthlyBurn)}/mo · Not a guarantee</span>
+        </div>
+
+        {/* 3-month revenue + cash forecast */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {cashProjection.map((m, i) => (
+            <div key={m.key} className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold text-[#9E7340] tracking-widest uppercase">{m.label}</span>
+                <span className="text-xs bg-[#F5EFE6] text-[#7C4A00] px-2 py-0.5 rounded-full font-semibold">Projected</span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Revenue</span>
+                  <span className="font-bold text-[#7C4A00]">{fmtEGP(m.projRev)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Expenses</span>
+                  <span className="text-gray-600">{fmtEGP(m.projExp)}</span>
+                </div>
+                <div className="flex justify-between text-sm border-t border-[#F0E8DC] pt-2">
+                  <span className="text-gray-500">Monthly Net</span>
+                  <span className={`font-bold ${m.projNet >= 0 ? 'text-green-700' : 'text-red-600'}`}>{fmtEGP(m.projNet)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Cum. Cash</span>
+                  <span className={`font-semibold text-xs ${m.cumCash >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmtEGP(m.cumCash)}</span>
+                </div>
+              </div>
+              {/* Progress bar toward break-even */}
+              <div className="mt-3">
+                <div className="flex justify-between text-xs text-gray-400 mb-1">
+                  <span>Rev vs Expenses</span>
+                  <span>{Math.min(100, (m.projRev / m.projExp * 100)).toFixed(0)}%</span>
+                </div>
+                <div className="w-full bg-[#F0E8DC] rounded-full h-1.5">
+                  <div
+                    className="h-1.5 rounded-full transition-all"
+                    style={{
+                      width: `${Math.min(100, (m.projRev / m.projExp) * 100)}%`,
+                      background: m.projRev >= m.projExp ? '#4CAF7D' : i === 0 ? '#E65100' : '#C4922A'
+                    }}
+                  />
+                </div>
+                {m.projRev >= m.projExp && (
+                  <p className="text-xs text-green-600 font-semibold mt-1">✓ Break-even reached</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Action Plan + Risks */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* Action Plan */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] p-5">
+            <h3 className="font-semibold text-[#3B2000] mb-4 text-sm uppercase tracking-wide flex items-center gap-2">
+              <span>🎯</span> Q4 Action Plan
+            </h3>
+            <div className="space-y-3">
+              {[
+                { icon: '🏪', title: 'Expand Bazaar Presence', desc: 'Target 2+ new bazaar locations (Wadi Degla, Madinaty) to replicate Lotus Bazaar success', status: 'priority' },
+                { icon: '📱', title: 'Activate Online Channel', desc: 'Launch structured Instagram/online ordering to convert existing followers into recurring buyers', status: 'priority' },
+                { icon: '🍫', title: 'New SKU Launch', desc: 'Introduce 1–2 new products based on top performers: Cashew Fudge & Pistachio Date variants', status: 'planned' },
+                { icon: '📦', title: 'Inventory Optimization', desc: 'Replenish critical stock (Hazelnuts, Coconut, Butter) to avoid lost sales during peak season', status: 'urgent' },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-3 items-start">
+                  <span className="text-lg flex-shrink-0 mt-0.5">{item.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-[#3B2000]">{item.title}</p>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                        item.status === 'urgent' ? 'bg-red-100 text-red-700' :
+                        item.status === 'priority' ? 'bg-amber-100 text-amber-700' :
+                        'bg-blue-100 text-blue-700'
+                      }`}>{item.status}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Risks */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] p-5">
+            <h3 className="font-semibold text-[#3B2000] mb-4 text-sm uppercase tracking-wide flex items-center gap-2">
+              <span>⚠️</span> Key Risks &amp; Mitigation
+            </h3>
+            <div className="space-y-4">
+              {[
+                {
+                  risk: 'Raw Material Price Volatility',
+                  impact: 'High',
+                  detail: 'Dates & nuts prices can spike seasonally — directly compresses margins.',
+                  mitigation: 'Lock in bulk purchases before Q4 peak; review pricing quarterly.',
+                  color: '#E53935'
+                },
+                {
+                  risk: 'Cash Runway Pressure',
+                  impact: 'High',
+                  detail: `Current runway ~${runwayMonths !== null ? runwayMonths.toFixed(1) + ' mo' : '∞'} — tight if revenue growth slows.`,
+                  mitigation: 'Prioritize high-AOV channels (bazaars); defer non-essential CAPEX.',
+                  color: '#E65100'
+                },
+                {
+                  risk: 'Production Capacity',
+                  impact: 'Medium',
+                  detail: 'Manual production may bottleneck if bazaar orders scale rapidly.',
+                  mitigation: 'Map max weekly output now; identify 1 part-time production hire threshold.',
+                  color: '#C4922A'
+                },
+              ].map((r, i) => (
+                <div key={i} className="border-l-4 pl-3 py-1" style={{ borderColor: r.color }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-sm font-semibold text-[#3B2000]">{r.risk}</p>
+                    <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ background: r.color + '22', color: r.color }}>{r.impact}</span>
+                  </div>
+                  <p className="text-xs text-gray-500">{r.detail}</p>
+                  <p className="text-xs text-green-700 font-medium mt-1">→ {r.mitigation}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
