@@ -149,6 +149,34 @@ const INGREDIENT_EN: Record<string, string> = {
   'ملح':            'Salt',
   'شوكولاتة حليب':  'Milk Chocolate',
   'شوكولاتة بيضاء': 'White Chocolate',
+  'وديس تمر':       'Date Paste',
+  'معجون تمر':      'Date Paste',
+  'دبس تمر':        'Date Molasses',
+  'خل تفاح':        'Apple Cider Vinegar',
+  'زيت زيتون':      'Olive Oil',
+  'زيت جوز':        'Walnut Oil',
+  'مكسرات مشكلة':   'Mixed Nuts',
+  'شوكولاتة':        'Chocolate',
+  'كريمة':           'Cream',
+  'حليب':            'Milk',
+  'بيض':             'Eggs',
+  'سكر':             'Sugar',
+  'عسل نحل':         'Raw Honey',
+  'زنجبيل':          'Ginger',
+  'كركم':            'Turmeric',
+  'يانسون':          'Anise',
+  'نعناع':           'Mint',
+  'لوز مطحون':       'Ground Almonds',
+  'بذور كتان':       'Flaxseeds',
+  'بذور عباد الشمس': 'Sunflower Seeds',
+  'بذور قرع':        'Pumpkin Seeds',
+  'تمر سكري':        'Sukkari Dates',
+  'تمر خلاص':        'Khlas Dates',
+  'قهوة':            'Coffee',
+  'شاي أخضر':        'Green Tea',
+  'نشا':             'Starch',
+  'بكينج باودر':     'Baking Powder',
+  'صودا الخبز':      'Baking Soda',
 }
 const BAZAAR_EN: Record<string, string> = {
   'بازار لوتس': 'Lotus Bazaar',
@@ -610,7 +638,7 @@ function InventoryTab({ lang }: { lang: Lang }) {
       {lowStock.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
           <p className="text-red-700 font-bold text-sm mb-1">⚠️ {ar ? 'مخزون منخفض:' : 'Low stock:'}</p>
-          <p className="text-red-600 text-sm">{lowStock.map(i => i.name).join(' · ')}</p>
+          <p className="text-red-600 text-sm">{lowStock.map(i => ar ? i.name : (INGREDIENT_EN[i.name] || i.name)).join(' · ')}</p>
         </div>
       )}
 
