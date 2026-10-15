@@ -102,10 +102,10 @@ export default function BoardPage() {
   const expColors = ['#7C4A00','#C4922A','#E8B84B','#4CAF7D','#2196F3','#9C27B0','#FF5722','#607D8B','#FF9800','#795548']
 
   // Monthly trend (last 6 months)
-  const allMonths = [...new Set([
-    ...sales.map(r => monthKey(r.sale_date)),
-    ...expenses.map(r => monthKey(r.expense_date)),
-  ])].sort().slice(-6)
+  const allMonthsSet: Record<string,1> = {}
+  sales.forEach(r => { allMonthsSet[monthKey(r.sale_date)] = 1 })
+  expenses.forEach(r => { allMonthsSet[monthKey(r.expense_date)] = 1 })
+  const allMonths = Object.keys(allMonthsSet).sort().slice(-6)
 
   const monthly: MonthData[] = allMonths.map(k => {
     const rev  = mRev(k)
