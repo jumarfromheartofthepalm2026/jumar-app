@@ -735,7 +735,8 @@ type Bazaar = { id: string; name: string; location: string; start_date: string; 
 
 function FinanceTab({ lang }: { lang: Lang }) {
   const ar = lang === 'ar'
-  const [tab, setTab] = useState<'overview'|'pl'|'cogs'|'inventory_turn'|'channels'|'customers'|'bazaar_roi'|'past_bazaars'|'cashflow'|'sales'|'expenses'>('overview')
+  const [tab, setTab] = useState<'overview'|'pl'|'cogs'|'inventory_turn'|'channels'|'customers'|'bazaar_roi'|'past_bazaars'|'cashflow'|'monthly_report'|'ltv'|'box_margins'|'stock_alert'|'sales'|'expenses'>('overview')
+  const [reportMonth, setReportMonth] = useState(() => new Date().toISOString().substring(0, 7))
   const [kpis, setKpis] = useState<KPIs | null>(null)
   const [monthlyData, setMonthlyData] = useState<MonthRow[]>([])
   const [sales, setSales] = useState<Sale[]>([])
@@ -857,7 +858,72 @@ function FinanceTab({ lang }: { lang: Lang }) {
   orders.forEach(o => { if (o.customers?.area) areaCount[o.customers.area] = (areaCount[o.customers.area] || 0) + 1 })
   const topAreas = Object.entries(areaCount).sort(([,a],[,b]) => b - a).slice(0, 5)
 
-  // ROI البازار الحالي (أحدث بازار في الـ bazaars table)
+  // ── استرداد رأس المال ──────────────────────────────────────────────────────
+  const totalInvested = totalOpex  // إجمالي كل المصروفات = رأس المال المستثمر
+  const capitalRecoveryPct = totalInvested > 0 ? (totalRevenue / totalInvested) * 100 : 0
+  const capitalRemaining = totalInvested - totalRevenue  // المتبقي للاسترداد
+  // فترة الاسترداد: بناءً على متوسط الربح الشهري
+  const avgMonthlyNetProfit = monthlyData.length > 0
+    ? monthlyData.slice(-3).reduce((s, m) => s + m.net, 0) / Math.min(monthlyData.slice(-3).length, 3)
+    : 0
+  const paybackMonths = avgMonthlyNetProfit > 0 && capitalRemaining > 0
+    ? Math.ceil(capitalRemaining / avgMonthlyNetProfit)
+    : null
+
+  // ── LTV (قيمة العميل على المدى) ────────────────────────────────────────────
+  // بناءً على orders فقط (العملاء المسجلين)
+  const customerMap: Record<string, { count: number; total: number }> = {}
+  orders.forEach(o => {
+    const key = o.customers?.phone || o.id
+    if (!customerMap[key]) customerMap[key] = { count: 0, total: 0 }
+    customerMap[key].count += 1
+    customerMap[key].total += Number(o.total_price || 0)
+  })
+  const customerList = Object.values(customerMap)
+  const avgLTV = customerList.length > 0
+    ? customerList.reduce((s, c) => s + c.total, 0) / customerList.length
+    : 0
+  const repeatLTV = customerList.filter(c => c.count > 1).length > 0
+    ? customerList.filter(c => c.count > 1).reduce((s, c) => s + c.total, 0) / customerList.filter(c => c.count > 1).length
+    : 0
+  const repeatRate = customerList.length > 0
+    ? (customerList.filter(c => c.count > 1).length / customerList.length) * 100
+    : 0
+
+  // ── هامش ربح حسب حجم العلبة ────────────────────────────────────────────────
+  const BOX_PRICE_MAP: Record<number, number> = { 2: 70, 5: 170, 8: 260, 15: 450, 24: 650 }
+  // استخراج المبيعات الفعلية من items_desc
+  const boxSalesCount: Record<number, number> = { 2: 0, 5: 0, 8: 0, 15: 0, 24: 0 }
+  sales.forEach(s => {
+    if (!s.items_desc) return
+    if (s.items_desc.includes('علبة ٢') || s.items_desc.includes('قطعتين')) boxSalesCount[2]++
+    else if (s.items_desc.includes('علبة ٥')) boxSalesCount[5]++
+    else if (s.items_desc.includes('علبة ٨')) boxSalesCount[8]++
+    else if (s.items_desc.includes('علبة ١٥')) boxSalesCount[15]++
+    else if (s.items_desc.includes('علبة ٢٤')) boxSalesCount[24]++
+  })
+  const totalBoxSales = Object.values(boxSalesCount).reduce((a, b) => a + b, 0)
+
+  // ── مخزون آمن وفرصة ضايعة ──────────────────────────────────────────────────
+  // أيام المخزون المتبقية لكل خامة (min across all)
+  const daysActive = Object.keys(Object.fromEntries(sales.map(s => [s.sale_date, 1]))).length || 1
+  let minDaysLeft = Infinity
+  let criticalIngredient = ''
+  ingredients.forEach(ing => {
+    let dailyUse = 0
+    Object.values(RECIPES).forEach(recipe => {
+      if (recipe[ing.name]) dailyUse += (recipe[ing.name] * totalQtySold) / daysActive
+    })
+    if (dailyUse > 0) {
+      const days = ing.stock_grams / dailyUse
+      if (days < minDaysLeft) { minDaysLeft = days; criticalIngredient = ing.name }
+    }
+  })
+  const stockDaysLeft = minDaysLeft === Infinity ? null : Math.round(minDaysLeft)
+  // فرص ضايعة: أي يوم وصل المخزون صفر (نستخدم حركة notes)
+  const zeroStockDays = sales.filter(s => (s.notes || '').includes('نفد المخزون')).length
+
+  // ── ROI البازار الحالي (أحدث بازار في الـ bazaars table) ───────────────────
   const currentBazaar = bazaars.length > 0 ? bazaars.find(b => b.end_date >= new Date().toISOString().split('T')[0]) || bazaars[0] : null
   const bazaarRevenue = currentBazaar
     ? (currentBazaar.revenue_actual || sales.filter(s => s.channel === 'بازار' && s.sale_date >= currentBazaar.start_date && s.sale_date <= currentBazaar.end_date).reduce((sum, s) => sum + Number(s.amount), 0))
@@ -895,6 +961,10 @@ function FinanceTab({ lang }: { lang: Lang }) {
     ['bazaar_roi',ar ? '🏪 ROI بازار' : '🏪 Bazaar ROI'],
     ['past_bazaars', ar ? '📊 بازارات سابقة' : '📊 Past Bazaars'],
     ['cashflow', ar ? '💵 تدفق نقدي'  : '💵 Cash Flow'],
+    ['monthly_report', ar ? '📄 تقرير شهري' : '📄 Monthly Report'],
+    ['ltv',      ar ? '👤 LTV عملاء'  : '👤 Customer LTV'],
+    ['box_margins', ar ? '📦 هامش العلب' : '📦 Box Margins'],
+    ['stock_alert', ar ? '🚨 تنبيه مخزون' : '🚨 Stock Alert'],
     ['sales',    ar ? '🛍️ بيعة'       : '🛍️ Add Sale'],
     ['expenses', ar ? '🧾 مصروف'      : '🧾 Add Expense'],
   ] as const
@@ -953,6 +1023,54 @@ function FinanceTab({ lang }: { lang: Lang }) {
                 <p className="text-sm font-bold text-amber-800 mb-1">🎯 {ar ? 'Break-Even الشهري' : 'Monthly Break-Even'}</p>
                 <p className="text-2xl font-bold text-amber-700">{breakEvenPieces.toLocaleString(ar ? 'ar-EG' : 'en-US')} {ar ? 'قطعة/شهر' : 'pcs/month'}</p>
                 <p className="text-xs text-amber-600 mt-1">({Math.round(breakEvenPieces / 30)} {ar ? 'قطعة/يوم' : 'pcs/day'}) · {ar ? 'هامش مساهمة' : 'Contribution margin'}: {fmt(contributionMarginPerPiece)} {cur}/{ar ? 'قطعة' : 'pc'}</p>
+              </div>
+            )}
+
+            {/* استرداد رأس المال */}
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <h2 className="font-bold text-jumar-brown">💰 {ar ? 'استرداد رأس المال' : 'Capital Recovery'}</h2>
+              </div>
+              <div className="p-4">
+                <div className="flex justify-between items-end mb-2">
+                  <div>
+                    <p className="text-xs text-gray-400 mb-0.5">{ar ? 'إجمالي المستثمر' : 'Total Invested'}</p>
+                    <p className="text-lg font-bold text-red-500">{fmt(totalInvested)} {cur}</p>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs text-gray-400 mb-0.5">{ar ? 'تم استرداده' : 'Recovered'}</p>
+                    <p className="text-lg font-bold text-green-600">{fmt(totalRevenue)} {cur}</p>
+                  </div>
+                </div>
+                <div className="w-full bg-red-100 rounded-full h-3 mb-2 overflow-hidden">
+                  <div className="bg-green-500 h-3 rounded-full transition-all" style={{ width: `${Math.min(100, capitalRecoveryPct)}%` }} />
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-bold text-green-600">{capitalRecoveryPct.toFixed(1)}% {ar ? 'مسترد' : 'recovered'}</span>
+                  {capitalRemaining > 0
+                    ? <span className="text-xs text-red-400">{ar ? 'متبقي' : 'Remaining'}: {fmt(capitalRemaining)} {cur}</span>
+                    : <span className="text-xs text-green-600 font-bold">✅ {ar ? 'تم الاسترداد الكامل' : 'Fully recovered'}</span>
+                  }
+                </div>
+                {paybackMonths !== null && (
+                  <div className="mt-3 bg-amber-50 rounded-xl p-3 text-center">
+                    <p className="text-xs text-amber-600 mb-0.5">{ar ? 'فترة الاسترداد المتوقعة' : 'Est. Payback Period'}</p>
+                    <p className="text-xl font-bold text-amber-700">{paybackMonths} {ar ? 'شهر' : 'months'}</p>
+                    <p className="text-xs text-amber-500">{ar ? `بناءً على متوسط آخر ${Math.min(monthlyData.slice(-3).length,3)} شهور` : `Based on last ${Math.min(monthlyData.slice(-3).length,3)} months avg`}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* تنبيه المخزون */}
+            {stockDaysLeft !== null && stockDaysLeft <= 14 && (
+              <div className={`rounded-2xl p-4 border ${stockDaysLeft <= 5 ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+                <p className={`text-sm font-bold mb-1 ${stockDaysLeft <= 5 ? 'text-red-700' : 'text-amber-700'}`}>
+                  {stockDaysLeft <= 5 ? '🚨' : '⚠️'} {ar ? 'تحذير المخزون' : 'Stock Warning'}
+                </p>
+                <p className={`text-xs ${stockDaysLeft <= 5 ? 'text-red-600' : 'text-amber-600'}`}>
+                  {ar ? `${criticalIngredient} يكفي ~${stockDaysLeft} يوم بالمعدل الحالي` : `${criticalIngredient} covers ~${stockDaysLeft} days at current rate`}
+                </p>
               </div>
             )}
 
@@ -1414,6 +1532,501 @@ function FinanceTab({ lang }: { lang: Lang }) {
                 <p className="text-xs text-green-600 mt-1">{ar ? 'مفيش حرق كاش' : 'No cash burn'}</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── التقرير المالي الشهري ── */}
+        {tab === 'monthly_report' && (() => {
+          // بيانات الشهر المختار
+          const mSales = sales.filter(s => s.sale_date.startsWith(reportMonth))
+          const mExpenses = expenses.filter(e => e.expense_date.startsWith(reportMonth))
+
+          // إيرادات
+          const mRevenue = mSales.reduce((s, r) => s + Number(r.amount), 0)
+          const byChannel: Record<string, number> = {}
+          mSales.forEach(s => { byChannel[s.channel] = (byChannel[s.channel] || 0) + Number(s.amount) })
+          const byCustomerType: Record<string, number> = {}
+          mSales.forEach(s => { if (s.customer_type) byCustomerType[s.customer_type] = (byCustomerType[s.customer_type] || 0) + Number(s.amount) })
+
+          // كميات
+          const mQtySold = mSales.reduce((s, r) => s + (r.qty_tamriya||0)+(r.qty_fudge||0)+(r.qty_sultana||0)+(r.qty_snickers_fool||0)+(r.qty_snickers_bunduq||0), 0)
+          const mGiftQty = mSales.reduce((s, r) => { const m = (r.notes||'').match(/gift:(\d+)/); return s + (m ? parseInt(m[1]) : 0) }, 0)
+          const mOrderCount = mSales.length
+          const mAOV = mOrderCount > 0 ? mRevenue / mOrderCount : 0
+
+          // COGS
+          const mAvgCOG = (() => {
+            const products = Object.entries(RECIPES).filter(([n]) => n !== 'سنيكرز البندق')
+            const costs = products.map(([, recipe]) => Object.entries(recipe).reduce((sum, [ing, g]) => {
+              const found = ingredients.find(i => i.name === ing) || DEFAULT_INGREDIENTS.find(i => i.name === ing)
+              return sum + (found ? found.cost_per_gram * g : 0)
+            }, 0))
+            return costs.length ? costs.reduce((a, x) => a + x, 0) / costs.length : 7.3
+          })()
+          const mCOGS = mQtySold > 0 ? mQtySold * mAvgCOG : (mRevenue * 0.54)  // تقديري لو مفيش qty
+          const mGrossProfit = mRevenue - mCOGS
+          const mGrossMargin = mRevenue > 0 ? (mGrossProfit / mRevenue) * 100 : 0
+
+          // مصروفات
+          const mTotalExpenses = mExpenses.reduce((s, e) => s + Number(e.amount), 0)
+          const mExpByCategory: Record<string, number> = {}
+          mExpenses.forEach(e => { mExpByCategory[e.category] = (mExpByCategory[e.category] || 0) + Number(e.amount) })
+
+          // تصنيف المصروفات
+          const mMarketing = (mExpByCategory['تسويق'] || 0)
+          const mBazaarFees = (mExpByCategory['رسوم بازار'] || 0)
+          const mPackaging = (mExpByCategory['تغليف'] || 0)
+          const mFixed = (mExpByCategory['عمالة'] || 0) + (mExpByCategory['إيجار'] || 0) + (mExpByCategory['معدات'] || 0)
+
+          // صافي الربح
+          const mNetProfit = mGrossProfit - mTotalExpenses
+          const mNetMargin = mRevenue > 0 ? (mNetProfit / mRevenue) * 100 : 0
+
+          // KPIs
+          const mROAS = mMarketing > 0 ? (mRevenue / mMarketing) * 100 : null
+          const mCAC = mOrderCount > 0 && mMarketing > 0 ? mMarketing / mOrderCount : null
+
+          // بازار الشهر
+          const mBazaar = bazaars.find(b => b.start_date.startsWith(reportMonth) || b.end_date.startsWith(reportMonth))
+          const mBazaarRevenue = mBazaar?.revenue_actual || byChannel['بازار'] || 0
+          const mBazaarCost = mBazaar?.fixed_cost || mBazaarFees
+          const mBazaarNet = mBazaarRevenue - mBazaarCost
+          const mBazaarROI = mBazaarCost > 0 ? (mBazaarNet / mBazaarCost) * 100 : null
+
+          // حسابات مخزون
+          const inventoryVal = ingredients.reduce((s, i) => s + i.stock_grams * i.cost_per_gram, 0)
+
+          // اشتقاق تاريخ نهاية الشهر
+          const [y, mo] = reportMonth.split('-').map(Number)
+          const lastDay = new Date(y, mo, 0).toLocaleDateString(ar ? 'ar-EG' : 'en-US', { day:'numeric', month:'long', year:'numeric' })
+
+          const arMonths: Record<string,string> = {'01':'يناير','02':'فبراير','03':'مارس','04':'أبريل','05':'مايو','06':'يونيو','07':'يوليو','08':'أغسطس','09':'سبتمبر','10':'أكتوبر','11':'نوفمبر','12':'ديسمبر'}
+          const monthLabel = ar ? `${arMonths[reportMonth.split('-')[1]]} ${reportMonth.split('-')[0]}` : new Date(y, mo-1).toLocaleString('en-US', {month:'long', year:'numeric'})
+
+          const Row = ({ label, value, color='text-gray-800', bold=false, indent=false }: { label: string; value: string; color?: string; bold?: boolean; indent?: boolean }) => (
+            <div className={`flex justify-between items-center px-4 py-2 ${indent ? 'bg-gray-50' : ''}`}>
+              <span className={`text-sm ${indent ? 'text-gray-500 pr-4' : 'text-gray-700'} ${bold ? 'font-bold' : ''}`}>{label}</span>
+              <span className={`text-sm font-semibold ${color}`}>{value}</span>
+            </div>
+          )
+
+          return (
+            <div className="space-y-4">
+              {/* اختيار الشهر */}
+              <div className="flex items-center gap-3 bg-white rounded-2xl p-4 shadow-sm">
+                <span className="text-sm font-bold text-jumar-brown flex-shrink-0">{ar ? 'الشهر:' : 'Month:'}</span>
+                <input type="month" value={reportMonth} onChange={e => setReportMonth(e.target.value)}
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" />
+              </div>
+
+              {mRevenue === 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 text-center">
+                  {ar ? 'لا توجد مبيعات مسجلة لهذا الشهر' : 'No sales recorded for this month'}
+                </div>
+              )}
+
+              {/* ملخص تنفيذي */}
+              <div className="bg-jumar-brown text-white rounded-2xl p-5">
+                <p className="text-xs text-white/60 mb-1">{ar ? 'التقرير المالي' : 'Financial Report'}</p>
+                <h2 className="text-xl font-bold text-jumar-gold mb-3">{monthLabel}</h2>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: ar ? 'إجمالي الإيرادات' : 'Total Revenue', value: `${fmt(mRevenue)} ${cur}`, color: 'text-jumar-gold' },
+                    { label: ar ? 'صافي الربح' : 'Net Profit', value: `${mNetProfit >= 0 ? '+' : ''}${fmt(mNetProfit)} ${cur}`, color: mNetProfit >= 0 ? 'text-green-300' : 'text-red-300' },
+                    { label: ar ? 'هامش إجمالي' : 'Gross Margin', value: `${mGrossMargin.toFixed(1)}%`, color: 'text-white' },
+                    { label: ar ? 'قطع مباعة' : 'Units Sold', value: `${mQtySold} ${ar ? 'قطعة' : 'pcs'}`, color: 'text-white' },
+                  ].map((kpi, i) => (
+                    <div key={i} className="bg-white/10 rounded-xl p-3 text-center">
+                      <p className="text-xs text-white/60 mb-1 leading-snug">{kpi.label}</p>
+                      <p className={`text-lg font-bold ${kpi.color}`}>{kpi.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ١. الإيرادات */}
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 bg-green-50">
+                  <h3 className="font-bold text-green-700">١. {ar ? 'الإيرادات' : 'Revenue'}</h3>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  <Row label={ar ? 'إجمالي الإيرادات' : 'Total Revenue'} value={`${fmt(mRevenue)} ${cur}`} color="text-green-600" bold />
+                  {Object.entries(byChannel).sort(([,a],[,b]) => b-a).map(([ch, v]) => (
+                    <Row key={ch} label={ch} value={`${fmt(v)} ${cur} (${mRevenue > 0 ? ((v/mRevenue)*100).toFixed(0) : 0}%)`} color="text-green-600" indent />
+                  ))}
+                  <div className="px-4 py-2 bg-gray-50">
+                    <div className="flex justify-between text-xs text-gray-400">
+                      <span>{ar ? 'من دائرة قريبة (قريب/معرفة)' : 'Close circle'}</span>
+                      <span>{fmt(byCustomerType['قريب/معرفة'] || 0)} {cur} ({mRevenue > 0 ? (((byCustomerType['قريب/معرفة']||0)/mRevenue)*100).toFixed(0) : 0}%)</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-400 mt-1">
+                      <span>{ar ? 'من عملاء خارجيين (غريب)' : 'External customers'}</span>
+                      <span>{fmt(byCustomerType['غريب'] || 0)} {cur} ({mRevenue > 0 ? (((byCustomerType['غريب']||0)/mRevenue)*100).toFixed(0) : 0}%)</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 divide-x divide-gray-100 text-center">
+                    <div className="p-3"><p className="text-xs text-gray-400">{ar ? 'أوردرات' : 'Orders'}</p><p className="font-bold text-jumar-brown">{mOrderCount}</p></div>
+                    <div className="p-3"><p className="text-xs text-gray-400">{ar ? 'قطع مباعة' : 'Sold'}</p><p className="font-bold text-jumar-brown">{mQtySold > 0 ? mQtySold : '—'}</p></div>
+                    <div className="p-3"><p className="text-xs text-gray-400">AOV</p><p className="font-bold text-jumar-brown">{fmt(mAOV)} {cur}</p></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ٢. P&L */}
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 bg-blue-50">
+                  <h3 className="font-bold text-blue-700">٢. {ar ? 'قائمة الأرباح والخسائر' : 'Profit & Loss'}</h3>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  <Row label={ar ? 'إجمالي الإيرادات' : 'Revenue'} value={`${fmt(mRevenue)} ${cur}`} color="text-green-600" bold />
+                  <Row label={`(-) ${ar ? 'تكلفة البضاعة (COGS)' : 'COGS'}`} value={`−${fmt(mCOGS)} ${cur}`} color="text-red-500" indent />
+                  <div className="px-4 py-3 bg-green-50">
+                    <div className="flex justify-between"><span className="font-bold text-sm text-gray-700">= {ar ? 'إجمالي الربح' : 'Gross Profit'}</span><span className="font-bold text-green-600">{fmt(mGrossProfit)} {cur}</span></div>
+                    <p className="text-xs text-jumar-gold mt-0.5">{ar ? 'هامش إجمالي' : 'Gross margin'}: {mGrossMargin.toFixed(1)}% {mGrossMargin >= 40 ? '✅' : mGrossMargin >= 30 ? '⚠️' : '❌'}</p>
+                  </div>
+                  {Object.entries(mExpByCategory).filter(([,v]) => v > 0).sort(([,a],[,b]) => b-a).map(([cat, v]) => (
+                    <Row key={cat} label={`(-) ${cat}`} value={`−${fmt(v)} ${cur}`} color="text-red-400" indent />
+                  ))}
+                  {mGiftQty > 0 && <Row label={`(-) ${ar ? `هدايا (${mGiftQty} قطعة)` : `Gifts (${mGiftQty} pcs)`}`} value={`−${fmt(mGiftQty * (mAvgCOG + PACKAGING_COST_PER_PIECE))} ${cur}`} color="text-orange-400" indent />}
+                  <div className={`px-4 py-3 ${mNetProfit >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                    <div className="flex justify-between"><span className="font-bold text-gray-800">= {ar ? 'صافي الربح' : 'Net Profit'}</span><span className={`font-bold text-lg ${mNetProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{mNetProfit >= 0 ? '+' : '−'}{fmt(Math.abs(mNetProfit))} {cur}</span></div>
+                    <p className="text-xs text-gray-500 mt-0.5">{ar ? 'هامش صافي' : 'Net margin'}: {mNetMargin.toFixed(1)}%</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* ٣. تفاصيل المصروفات */}
+              {mTotalExpenses > 0 && (
+                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100 bg-red-50">
+                    <h3 className="font-bold text-red-700">٣. {ar ? 'تفاصيل المصروفات' : 'Expense Breakdown'}</h3>
+                    <p className="text-xs text-red-400 mt-0.5">{ar ? `الإجمالي: ${fmt(mTotalExpenses)} ${cur}` : `Total: ${fmt(mTotalExpenses)} ${cur}`}</p>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {Object.entries(mExpByCategory).filter(([,v]) => v > 0).sort(([,a],[,b]) => b-a).map(([cat, v]) => {
+                      const pct = mTotalExpenses > 0 ? (v / mTotalExpenses * 100) : 0
+                      const mExpItems = mExpenses.filter(e => e.category === cat)
+                      return (
+                        <div key={cat} className="px-4 py-3">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-sm font-semibold text-gray-700">{cat}</span>
+                            <span className="text-sm font-bold text-red-500">{fmt(v)} {cur}</span>
+                          </div>
+                          <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1">
+                            <div className="bg-red-400 h-1.5 rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                          {mExpItems.map(e => (
+                            <p key={e.id} className="text-xs text-gray-400 mt-0.5">· {e.description} ({fmt(Number(e.amount))} {cur})</p>
+                          ))}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ٤. KPIs التسويق */}
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 bg-purple-50">
+                  <h3 className="font-bold text-purple-700">٤. {ar ? 'مؤشرات الأداء' : 'KPIs'}</h3>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {[
+                    { label: 'ROAS', value: mROAS !== null ? `${mROAS.toFixed(0)}%` : '—', note: ar ? 'المقبول ≥ 200%' : 'Acceptable ≥ 200%', ok: mROAS !== null && mROAS >= 200 },
+                    { label: ar ? 'CAC (تكلفة اكتساب عميل)' : 'CAC', value: mCAC !== null ? `${fmt(mCAC)} ${cur}` : '—', note: `AOV: ${fmt(mAOV)} ${cur}`, ok: mCAC !== null && mCAC < mAOV },
+                    { label: ar ? 'هامش إجمالي' : 'Gross Margin', value: `${mGrossMargin.toFixed(1)}%`, note: ar ? 'المعتاد في قطاع الأغذية 30–40%' : 'Food sector avg 30–40%', ok: mGrossMargin >= 40 },
+                    { label: ar ? 'متوسط قيمة الأوردر (AOV)' : 'AOV', value: `${fmt(mAOV)} ${cur}`, note: '', ok: mAOV >= 200 },
+                  ].map((kpi, i) => (
+                    <div key={i} className="flex justify-between items-center px-4 py-3">
+                      <div><p className="text-sm text-gray-700">{kpi.label}</p>{kpi.note && <p className="text-xs text-gray-400">{kpi.note}</p>}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-gray-800">{kpi.value}</span>
+                        {kpi.value !== '—' && <span>{kpi.ok ? '✅' : '❌'}</span>}
+                      </div>
+                    </div>
+                  ))}
+                  {mBazaarROI !== null && (
+                    <div className="flex justify-between items-center px-4 py-3">
+                      <div><p className="text-sm text-gray-700">{ar ? 'ROI بازار الشهر' : 'Bazaar ROI'}</p><p className="text-xs text-gray-400">{ar ? 'إيراد − رسوم ÷ رسوم' : 'Net ÷ cost'}</p></div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-gray-800">{mBazaarROI.toFixed(0)}%</span>
+                        <span>{mBazaarROI >= 50 ? '✅' : mBazaarROI >= 0 ? '⚠️' : '❌'}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ٥. المركز النقدي */}
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 bg-amber-50">
+                  <h3 className="font-bold text-amber-700">٥. {ar ? 'المركز الحالي' : 'Current Position'}</h3>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  <Row label={ar ? 'قيمة مخزون الخامات' : 'Raw Material Inventory'} value={`${fmt(inventoryVal)} ${cur}`} color="text-jumar-brown" />
+                  {mGiftQty > 0 && <Row label={ar ? `عينات مجانية (${mGiftQty} قطعة)` : `Free samples (${mGiftQty} pcs)`} value={`${fmt(mGiftQty * (mAvgCOG + PACKAGING_COST_PER_PIECE))} ${cur}`} color="text-orange-500" />}
+                </div>
+              </div>
+
+              {/* ٦. ملاحظة ختامية */}
+              <div className={`rounded-2xl p-4 ${mNetProfit >= 0 ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}`}>
+                <p className={`text-sm font-bold mb-1 ${mNetProfit >= 0 ? 'text-green-700' : 'text-amber-700'}`}>
+                  {mNetProfit >= 0 ? '✅' : '💡'} {ar ? 'ملاحظة ختامية' : 'Summary'}
+                </p>
+                <p className={`text-xs leading-relaxed ${mNetProfit >= 0 ? 'text-green-600' : 'text-amber-600'}`}>
+                  {ar
+                    ? mNetProfit >= 0
+                      ? `أغلق ${monthLabel} بصافي ربح ${fmt(mNetProfit)} ج وهامش إجمالي ${mGrossMargin.toFixed(1)}٪.`
+                      : `سجّل ${monthLabel} خسارة صافية ${fmt(Math.abs(mNetProfit))} ج. السبب الرئيسي: ${
+                          mMarketing > mBazaarFees ? 'إنفاق تسويقي مرتفع' :
+                          mBazaarFees > 0 ? `رسوم بازار ${fmt(mBazaarFees)} ج` : 'مصروفات التشغيل'
+                        }.`
+                    : mNetProfit >= 0
+                      ? `${monthLabel} closed with net profit of ${fmt(mNetProfit)} ${cur} and gross margin ${mGrossMargin.toFixed(1)}%.`
+                      : `${monthLabel} recorded a net loss of ${fmt(Math.abs(mNetProfit))} ${cur}.`
+                  }
+                </p>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* ── LTV العملاء ── */}
+        {tab === 'ltv' && (
+          <div className="space-y-4">
+            {/* بطاقات رئيسية */}
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: ar ? 'متوسط LTV (كل العملاء)' : 'Avg LTV (all)', value: `${fmt(avgLTV)} ${cur}`, color: 'text-jumar-brown', sub: `${customerList.length} ${ar ? 'عميل' : 'customers'}` },
+                { label: ar ? 'LTV العميل المكرر' : 'Repeat Customer LTV', value: repeatLTV > 0 ? `${fmt(repeatLTV)} ${cur}` : '—', color: 'text-green-600', sub: ar ? 'أعلى بكتير' : 'much higher' },
+                { label: ar ? 'نسبة التكرار' : 'Repeat Rate', value: `${repeatRate.toFixed(1)}%`, color: repeatRate >= 20 ? 'text-green-600' : 'text-amber-600', sub: `${customerList.filter(c => c.count > 1).length} ${ar ? 'مكرر' : 'repeat'}` },
+                { label: ar ? 'متوسط الطلب (AOV)' : 'AOV', value: `${fmt(avgOrderValue)} ${cur}`, color: 'text-jumar-gold', sub: `${orders.length} ${ar ? 'طلب' : 'orders'}` },
+              ].map((kpi, i) => (
+                <div key={i} className="bg-white rounded-2xl p-4 shadow-sm text-center">
+                  <p className="text-xs text-gray-400 leading-snug mb-1">{kpi.label}</p>
+                  <p className={`text-xl font-bold ${kpi.color}`}>{kpi.value}</p>
+                  <p className="text-xs text-gray-300 mt-0.5">{kpi.sub}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* مقارنة: عميل جديد vs مكرر */}
+            {repeatLTV > 0 && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <p className="text-sm font-bold text-jumar-brown mb-3">📊 {ar ? 'جديد مقابل مكرر' : 'New vs Repeat'}</p>
+                <div className="space-y-3">
+                  {[
+                    { label: ar ? 'عميل جديد (مرة واحدة)' : 'One-time customer', value: customerList.filter(c => c.count === 1).length > 0 ? customerList.filter(c=>c.count===1).reduce((s,c)=>s+c.total,0)/customerList.filter(c=>c.count===1).length : 0, color: 'bg-gray-300' },
+                    { label: ar ? 'عميل مكرر (أكثر من مرة)' : 'Repeat customer', value: repeatLTV, color: 'bg-green-500' },
+                  ].map((row, i) => (
+                    <div key={i}>
+                      <div className="flex justify-between text-xs text-gray-500 mb-1"><span>{row.label}</span><span className="font-bold text-gray-700">{fmt(row.value)} {cur}</span></div>
+                      <div className="w-full bg-gray-100 rounded-full h-2">
+                        <div className={`${row.color} h-2 rounded-full`} style={{ width: `${Math.min(100, repeatLTV > 0 ? (row.value / repeatLTV) * 100 : 0)}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-green-600 mt-3 font-semibold">
+                  {repeatLTV > 0 && customerList.filter(c=>c.count===1).length > 0
+                    ? `${ar ? '⬆️ العميل المكرر يساوي' : '⬆️ Repeat customer worth'} ${(repeatLTV / (customerList.filter(c=>c.count===1).reduce((s,c)=>s+c.total,0)/customerList.filter(c=>c.count===1).length || 1)).toFixed(1)}x ${ar ? 'العميل الجديد' : 'a new customer'}`
+                    : ''
+                  }
+                </p>
+              </div>
+            )}
+
+            {/* توزيع قيمة العملاء */}
+            {customerList.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-gray-100"><p className="font-bold text-jumar-brown">🏆 {ar ? 'أعلى عملاء بالقيمة' : 'Top Customers by Value'}</p></div>
+                <div className="divide-y divide-gray-50 max-h-72 overflow-y-auto">
+                  {Object.entries(customerMap).sort(([,a],[,b]) => b.total - a.total).slice(0, 10).map(([key, c], i) => {
+                    const order = orders.find(o => (o.customers?.phone || o.id) === key)
+                    return (
+                      <div key={i} className="p-3 flex justify-between items-center">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">{order?.customers?.name || `عميل #${i+1}`}</p>
+                          <p className="text-xs text-gray-400">{order?.customers?.area || ''} · {c.count} {ar ? 'طلبات' : 'orders'}</p>
+                        </div>
+                        <div className="text-left">
+                          <p className="font-bold text-green-600 text-sm">{fmt(c.total)} {cur}</p>
+                          {c.count > 1 && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{ar ? 'مكرر' : 'Repeat'}</span>}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {customerList.length === 0 && (
+              <div className="text-center py-8 text-gray-400 text-sm">{ar ? 'سجّل طلبات بأسماء عملاء لحساب LTV' : 'Record orders with customer names to calculate LTV'}</div>
+            )}
+          </div>
+        )}
+
+        {/* ── هامش ربح العلب ── */}
+        {tab === 'box_margins' && (() => {
+          const boxData = BOX_SIZES.map(({ label, pieces }) => {
+            const price = BOX_PRICE_MAP[pieces] || 0
+            const costPerPiece = avgCogPerPiece + PACKAGING_COST_PER_PIECE
+            const totalCost = costPerPiece * pieces
+            const profit = price - totalCost
+            const margin = price > 0 ? (profit / price) * 100 : 0
+            const salesCount = boxSalesCount[pieces] || 0
+            const totalRevForBox = salesCount * price
+            const shareOfTotal = totalRevenue > 0 ? (totalRevForBox / totalRevenue) * 100 : 0
+            return { label, pieces, price, totalCost, profit, margin, salesCount, totalRevForBox, shareOfTotal }
+          }).sort((a, b) => b.margin - a.margin)
+
+          const bestBox = boxData[0]
+          const mostSold = [...boxData].sort((a, b) => b.salesCount - a.salesCount)[0]
+
+          return (
+            <div className="space-y-4">
+              {/* ملخص */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
+                  <p className="text-xs text-green-600 mb-1">{ar ? 'أعلى هامش ربح' : 'Best Margin'}</p>
+                  <p className="text-xl font-bold text-green-700">{bestBox.label}</p>
+                  <p className="text-sm text-green-600">{bestBox.margin.toFixed(1)}%</p>
+                </div>
+                {mostSold.salesCount > 0 && (
+                  <div className="bg-jumar-brown text-white rounded-2xl p-4 text-center">
+                    <p className="text-xs text-white/60 mb-1">{ar ? 'الأكثر مبيعاً' : 'Best Seller'}</p>
+                    <p className="text-xl font-bold text-jumar-gold">{mostSold.label}</p>
+                    <p className="text-sm text-white/80">{mostSold.salesCount} {ar ? 'بيعة' : 'sales'}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* جدول العلب */}
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="font-bold text-jumar-brown">{ar ? 'تفاصيل كل حجم علبة' : 'Box Size Breakdown'}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{ar ? `تكلفة القطعة: ${(avgCogPerPiece + PACKAGING_COST_PER_PIECE).toFixed(2)} ج` : `Cost/pc: ${(avgCogPerPiece + PACKAGING_COST_PER_PIECE).toFixed(2)} ${cur}`}</p>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {boxData.map(box => (
+                    <div key={box.pieces} className="p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-gray-800">{box.label}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${box.margin >= 50 ? 'bg-green-100 text-green-700' : box.margin >= 40 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'}`}>{box.margin.toFixed(1)}%</span>
+                        </div>
+                        <span className="font-bold text-jumar-brown">{fmt(box.price)} {cur}</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2 mb-2 overflow-hidden">
+                        <div className={`h-2 rounded-full ${box.margin >= 50 ? 'bg-green-500' : box.margin >= 40 ? 'bg-amber-400' : 'bg-red-400'}`} style={{ width: `${Math.min(100, box.margin)}%` }} />
+                      </div>
+                      <div className="grid grid-cols-4 gap-1 text-center text-xs text-gray-500">
+                        <div><p className="text-gray-400">{ar ? 'تكلفة' : 'Cost'}</p><p className="font-bold text-red-500">{box.totalCost.toFixed(0)}{cur}</p></div>
+                        <div><p className="text-gray-400">{ar ? 'ربح' : 'Profit'}</p><p className="font-bold text-green-600">{box.profit.toFixed(0)}{cur}</p></div>
+                        <div><p className="text-gray-400">{ar ? 'مبيع' : 'Sold'}</p><p className="font-bold text-jumar-brown">{box.salesCount > 0 ? box.salesCount : '—'}</p></div>
+                        <div><p className="text-gray-400">{ar ? 'من الإيراد' : 'Share'}</p><p className="font-bold">{box.salesCount > 0 ? `${box.shareOfTotal.toFixed(1)}%` : '—'}</p></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {totalBoxSales === 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+                  💡 {ar ? 'الأرقام في عمود "مبيع" بتيجي من items_desc في المبيعات. لو مكتوبة بشكل مختلف هتظهر صفر.' : 'Sales counts come from items_desc field. If descriptions differ, counts show zero.'}
+                </div>
+              )}
+            </div>
+          )
+        })()}
+
+        {/* ── تنبيه المخزون المتقدم ── */}
+        {tab === 'stock_alert' && (
+          <div className="space-y-4">
+            {/* شريط خطر */}
+            {stockDaysLeft !== null && stockDaysLeft <= 14 && (
+              <div className={`rounded-2xl p-4 ${stockDaysLeft <= 5 ? 'bg-red-600 text-white' : 'bg-amber-50 border border-amber-300'}`}>
+                <p className={`font-bold text-lg mb-1 ${stockDaysLeft <= 5 ? 'text-white' : 'text-amber-800'}`}>
+                  {stockDaysLeft <= 5 ? '🚨' : '⚠️'} {ar ? `المخزون يكفي ${stockDaysLeft} يوم فقط` : `Stock covers only ${stockDaysLeft} days`}
+                </p>
+                <p className={`text-sm ${stockDaysLeft <= 5 ? 'text-red-100' : 'text-amber-600'}`}>
+                  {ar ? `أقل خامة: ${criticalIngredient}` : `Lowest: ${criticalIngredient}`}
+                </p>
+              </div>
+            )}
+            {stockDaysLeft !== null && stockDaysLeft > 14 && (
+              <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
+                <p className="text-green-700 font-bold text-lg">✅ {ar ? `المخزون يكفي ~${stockDaysLeft} يوم` : `Stock covers ~${stockDaysLeft} days`}</p>
+                <p className="text-xs text-green-500 mt-1">{ar ? `أقل خامة: ${criticalIngredient}` : `Critical: ${criticalIngredient}`}</p>
+              </div>
+            )}
+
+            {/* تفصيل كل خامة */}
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <p className="font-bold text-jumar-brown">{ar ? 'تفصيل المخزون' : 'Stock Detail'}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{ar ? `بناءً على معدل ${totalQtySold} قطعة في ${daysActive} يوم` : `Based on ${totalQtySold} pcs over ${daysActive} days`}</p>
+              </div>
+              <div className="divide-y divide-gray-50">
+                {ingredients.filter(ing => Object.values(RECIPES).some(r => r[ing.name])).map(ing => {
+                  let dailyUse = 0
+                  Object.values(RECIPES).forEach(recipe => {
+                    if (recipe[ing.name]) dailyUse += (recipe[ing.name] * totalQtySold) / daysActive
+                  })
+                  const daysLeft = dailyUse > 0 ? Math.round(ing.stock_grams / dailyUse) : null
+                  const isCritical = daysLeft !== null && daysLeft <= 5
+                  const isLow = daysLeft !== null && daysLeft <= 14
+                  const pctLeft = ing.min_stock > 0 ? Math.min(100, (ing.stock_grams / ing.min_stock) * 100) : 100
+                  return (
+                    <div key={ing.id} className={`p-4 ${isCritical ? 'bg-red-50' : isLow ? 'bg-amber-50' : ''}`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className={`font-semibold ${isCritical ? 'text-red-700' : 'text-gray-800'}`}>{ing.name}</p>
+                          <p className="text-xs text-gray-400">{ing.stock_grams.toLocaleString()}g {ar ? 'متاح' : 'available'} · {ar ? 'حد أدنى' : 'min'}: {ing.min_stock}g</p>
+                        </div>
+                        <div className={`text-center px-3 py-1 rounded-xl ${isCritical ? 'bg-red-100' : isLow ? 'bg-amber-100' : 'bg-green-100'}`}>
+                          <p className={`text-xl font-bold ${isCritical ? 'text-red-600' : isLow ? 'text-amber-600' : 'text-green-600'}`}>{daysLeft ?? '∞'}</p>
+                          <p className={`text-xs ${isCritical ? 'text-red-500' : isLow ? 'text-amber-500' : 'text-green-500'}`}>{ar ? 'يوم' : 'days'}</p>
+                        </div>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-1.5">
+                        <div className={`h-1.5 rounded-full ${isCritical ? 'bg-red-500' : isLow ? 'bg-amber-400' : 'bg-green-500'}`} style={{ width: `${Math.min(100, pctLeft)}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* نصيحة */}
+            <div className="bg-jumar-brown text-white rounded-2xl p-4">
+              <p className="text-sm font-bold text-jumar-gold mb-2">💡 {ar ? 'خامات تحتاج شراء الأسبوع الجاي' : 'Needs reorder next week'}</p>
+              <div className="space-y-1">
+                {ingredients.filter(ing => {
+                  let dailyUse = 0
+                  Object.values(RECIPES).forEach(recipe => { if (recipe[ing.name]) dailyUse += (recipe[ing.name] * totalQtySold) / daysActive })
+                  const days = dailyUse > 0 ? ing.stock_grams / dailyUse : Infinity
+                  return days <= 14 && days > 0
+                }).map(ing => {
+                  let dailyUse = 0
+                  Object.values(RECIPES).forEach(recipe => { if (recipe[ing.name]) dailyUse += (recipe[ing.name] * totalQtySold) / daysActive })
+                  const needed = Math.ceil(dailyUse * 30) // شراء لشهر
+                  return (
+                    <div key={ing.id} className="flex justify-between text-sm">
+                      <span className="text-white/80">{ing.name}</span>
+                      <span className="text-jumar-gold font-bold">{needed.toLocaleString()}g {ar ? 'لشهر' : 'for 1 mo.'}</span>
+                    </div>
+                  )
+                })}
+                {ingredients.filter(ing => {
+                  let dailyUse = 0
+                  Object.values(RECIPES).forEach(recipe => { if (recipe[ing.name]) dailyUse += (recipe[ing.name] * totalQtySold) / daysActive })
+                  return dailyUse > 0 && ing.stock_grams / dailyUse <= 14
+                }).length === 0 && (
+                  <p className="text-white/60 text-sm">{ar ? 'مفيش خامات تحتاج شراء دلوقتي ✅' : 'No reorders needed now ✅'}</p>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
