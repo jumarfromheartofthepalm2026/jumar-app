@@ -790,7 +790,7 @@ function InventoryTab({ lang }: { lang: Lang }) {
               <form onSubmit={handleAddStock} className="space-y-3">
                 <select value={addForm.ingredient_id} onChange={e => setAddForm({ ...addForm, ingredient_id: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold">
                   <option value="">{ar ? 'اختر الخامة *' : 'Select ingredient *'}</option>
-                  {ingredients.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                  {ingredients.map(i => <option key={i.id} value={i.id}>{ar ? i.name : (INGREDIENT_EN[i.name] || i.name)}</option>)}
                 </select>
                 <input required type="number" placeholder={ar ? 'الكمية (جرام) *' : 'Quantity (grams) *'} value={addForm.grams} onChange={e => setAddForm({ ...addForm, grams: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
                 <input type="number" placeholder={ar ? 'التكلفة الإجمالية (جنيه)' : 'Total cost (EGP)'} value={addForm.cost} onChange={e => setAddForm({ ...addForm, cost: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
@@ -808,7 +808,7 @@ function InventoryTab({ lang }: { lang: Lang }) {
               <form onSubmit={handleUseStock} className="space-y-3">
                 <select value={useForm.ingredient_id} onChange={e => setUseForm({ ...useForm, ingredient_id: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold">
                   <option value="">{ar ? 'اختر الخامة *' : 'Select ingredient *'}</option>
-                  {ingredients.map(i => <option key={i.id} value={i.id}>{i.name} — {ar ? 'متاح' : 'avail'}: {i.stock_grams}g</option>)}
+                  {ingredients.map(i => <option key={i.id} value={i.id}>{ar ? i.name : (INGREDIENT_EN[i.name] || i.name)} — {ar ? 'متاح' : 'avail'}: {i.stock_grams}g</option>)}
                 </select>
                 <input required type="number" placeholder={ar ? 'الكمية المستخدمة (جرام) *' : 'Used quantity (grams) *'} value={useForm.grams} onChange={e => setUseForm({ ...useForm, grams: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
                 <input placeholder={ar ? 'الدفعة / المنتج' : 'Batch / Product'} value={useForm.note} onChange={e => setUseForm({ ...useForm, note: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
@@ -1332,7 +1332,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                   {stockDaysLeft <= 5 ? '🚨' : '⚠️'} {ar ? 'تحذير المخزون' : 'Stock Warning'}
                 </p>
                 <p className={`text-xs ${stockDaysLeft <= 5 ? 'text-red-600' : 'text-amber-600'}`}>
-                  {ar ? `${criticalIngredient} يكفي ~${stockDaysLeft} يوم بالمعدل الحالي` : `${criticalIngredient} covers ~${stockDaysLeft} days at current rate`}
+                  {ar ? `${criticalIngredient} يكفي ~${stockDaysLeft} يوم بالمعدل الحالي` : `${INGREDIENT_EN[criticalIngredient] || criticalIngredient} covers ~${stockDaysLeft} days at current rate`}
                 </p>
               </div>
             )}
@@ -1944,7 +1944,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                   <div key={ing.id} className={`bg-white rounded-xl p-4 shadow-sm border-r-4 ${isCritical ? 'border-red-400' : isLow ? 'border-amber-400' : 'border-green-400'}`}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-bold text-gray-800">{ing.name}</p>
+                        <p className="font-bold text-gray-800">{ar ? ing.name : (INGREDIENT_EN[ing.name] || ing.name)}</p>
                         <p className="text-xs text-gray-400">{ing.stock_grams.toLocaleString(ar ? 'ar-EG' : 'en-US')}g · {ing.cost_per_gram.toFixed(2)} {cur}/g</p>
                         <p className="text-xs text-gray-400">{ar ? 'قيمة' : 'Value'}: {fmt(stockValue)} {cur}</p>
                       </div>
