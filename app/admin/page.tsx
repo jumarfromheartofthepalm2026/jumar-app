@@ -38,11 +38,11 @@ const RECIPES: Record<string, Record<string, number>> = {
 
 // أحجام العلب
 const BOX_SIZES = [
-  { label: 'علبة ٢', pieces: 2 },
-  { label: 'علبة ٥', pieces: 5 },
-  { label: 'علبة ٨', pieces: 8 },
-  { label: 'علبة ١٥', pieces: 15 },
-  { label: 'علبة ٢٤', pieces: 24 },
+  { label: 'علبة ٢', labelEn: 'Box 2', pieces: 2 },
+  { label: 'علبة ٥', labelEn: 'Box 5', pieces: 5 },
+  { label: 'علبة ٨', labelEn: 'Box 8', pieces: 8 },
+  { label: 'علبة ١٥', labelEn: 'Box 15', pieces: 15 },
+  { label: 'علبة ٢٤', labelEn: 'Box 24', pieces: 24 },
 ]
 const BOX_PRICE_MAP: Record<number, number> = { 2: 70, 5: 170, 8: 260, 15: 450, 24: 650 }
 
@@ -131,7 +131,28 @@ const INGREDIENT_EN: Record<string, string> = {
   'زبيب':           'Raisins',
   'كاكاو خام':      'Raw Cacao',
   'زيت جوز الهند':  'Coconut Oil',
+  'مشمش مجفف':      'Dried Apricots',
+  'مشمش':           'Apricots',
+  'توت بري':        'Blueberries',
+  'توت':            'Berries',
+  'عسل':            'Honey',
+  'قرفة':           'Cinnamon',
+  'هيل':            'Cardamom',
+  'لوز':            'Almonds',
+  'جوز':            'Walnuts',
+  'بذور شيا':       'Chia Seeds',
 }
+const BAZAAR_EN: Record<string, string> = {
+  'بازار لوتس': 'Lotus Bazaar',
+}
+const BAZAAR_LOCATION_EN: Record<string, string> = {
+  'لوتس': 'Lotus',
+  'الجاردينيا': 'Gardenia',
+  'التجمع': 'Fifth Settlement',
+  'مدينتي': 'Madinaty',
+  'القاهرة الجديدة': 'New Cairo',
+}
+
 const CUSTOMER_TYPE_EN: Record<string, string> = {
   'غريب':          'New',
   'عارف':          'Returning',
@@ -302,8 +323,8 @@ function OrdersTab({ lang }: { lang: Lang }) {
       {sales && (
         <div className="mb-4">
           <div className="grid grid-cols-2 gap-3 mb-3">
-            <div className="bg-jumar-brown text-white rounded-xl p-4"><p className="text-xs text-white/60 mb-1">{ar ? 'إجمالي الإيرادات' : 'Total Revenue'}</p><p className="text-xl font-bold text-jumar-gold">{sales.totalRevenue.toLocaleString('ar-EG')} {ar ? 'ج' : 'EGP'}</p></div>
-            <div className="bg-white rounded-xl p-4 shadow-sm"><p className="text-xs text-gray-400 mb-1">{ar ? 'اليوم' : 'Today'}</p><p className="text-xl font-bold text-green-600">{sales.todayRevenue.toLocaleString('ar-EG')} {ar ? 'ج' : 'EGP'}</p></div>
+            <div className="bg-jumar-brown text-white rounded-xl p-4"><p className="text-xs text-white/60 mb-1">{ar ? 'إجمالي الإيرادات' : 'Total Revenue'}</p><p className="text-xl font-bold text-jumar-gold">{sales.totalRevenue.toLocaleString(ar ? 'ar-EG' : 'en-US')} {ar ? 'ج' : 'EGP'}</p></div>
+            <div className="bg-white rounded-xl p-4 shadow-sm"><p className="text-xs text-gray-400 mb-1">{ar ? 'اليوم' : 'Today'}</p><p className="text-xl font-bold text-green-600">{sales.todayRevenue.toLocaleString(ar ? 'ar-EG' : 'en-US')} {ar ? 'ج' : 'EGP'}</p></div>
           </div>
           {sales.dailyData.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -628,7 +649,7 @@ function InventoryTab({ lang }: { lang: Lang }) {
                 <form onSubmit={handleAdjust} className="space-y-3">
                   <select value={adjustForm.ingredient_id} onChange={e => setAdjustForm({ ...adjustForm, ingredient_id: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold">
                     <option value="">{ar ? 'اختر الخامة' : 'Select ingredient'}</option>
-                    {ingredients.map(i => <option key={i.id} value={i.id}>{i.name} — {i.stock_grams}g</option>)}
+                    {ingredients.map(i => <option key={i.id} value={i.id}>{ar ? i.name : (INGREDIENT_EN[i.name] || i.name)} — {i.stock_grams}g</option>)}
                   </select>
                   <input type="number" placeholder={ar ? 'الكمية الفعلية (جرام)' : 'Actual quantity (grams)'} value={adjustForm.grams} onChange={e => setAdjustForm({ ...adjustForm, grams: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
                   <input placeholder={ar ? 'سبب التصحيح' : 'Reason'} value={adjustForm.note} onChange={e => setAdjustForm({ ...adjustForm, note: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:border-jumar-gold" />
@@ -643,12 +664,12 @@ function InventoryTab({ lang }: { lang: Lang }) {
             <div className="space-y-3">
               <p className="text-xs text-gray-400 text-center mb-2">{ar ? 'عدد العلب الجاهزة للبيع — اضغط + / − أو اكتب الرقم مباشرة' : 'Ready boxes for sale — tap + / − or type directly'}</p>
               <div className="grid grid-cols-1 gap-3">
-                {BOX_SIZES.map(({ label, pieces }) => {
+                {BOX_SIZES.map(({ label, labelEn, pieces }) => {
                   const qty = readyBoxes[pieces] || 0
                   return (
                     <div key={pieces} className="bg-white rounded-2xl p-4 shadow-sm flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-jumar-brown text-lg">{label}</p>
+                        <p className="font-bold text-jumar-brown text-lg">{ar ? label : labelEn}</p>
                         <p className="text-xs text-gray-400">{pieces} {ar ? 'قطعة' : 'pcs'}</p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -684,9 +705,9 @@ function InventoryTab({ lang }: { lang: Lang }) {
                 <div key={product} className="bg-white rounded-2xl p-4 shadow-sm">
                   <p className="font-bold text-jumar-brown mb-3">{ar ? product : (PRODUCT_EN[product] || product)}</p>
                   <div className="grid grid-cols-3 gap-2">
-                    {BOX_SIZES.map(({ label, pieces }) => (
+                    {BOX_SIZES.map(({ label, labelEn, pieces }) => (
                       <div key={pieces}>
-                        <p className="text-xs text-gray-400 mb-1">{label}</p>
+                        <p className="text-xs text-gray-400 mb-1">{ar ? label : labelEn}</p>
                         <input type="number" min="0" placeholder="0"
                           value={calcPlan[product]?.[pieces] || ''}
                           onChange={e => setCalcPlan(prev => ({
@@ -804,7 +825,7 @@ function BoxMarginsPanel({ ar, cur, avgCogPerPiece, cogPerPiece, boxSalesCount, 
   const maxCostPerPiece = maxCogPerPiece + PACKAGING_COST_PER_PIECE
   const costPerPieceUsed = viewMode === 'avg' ? (avgCogPerPiece + PACKAGING_COST_PER_PIECE) : maxCostPerPiece
 
-  const boxData = BOX_SIZES.map(({ label, pieces }) => {
+  const boxData = BOX_SIZES.map(({ label, labelEn, pieces }) => {
     const price = BOX_PRICE_MAP[pieces] || 0
     const totalCost = costPerPieceUsed * pieces
     const profit = price - totalCost
@@ -812,7 +833,7 @@ function BoxMarginsPanel({ ar, cur, avgCogPerPiece, cogPerPiece, boxSalesCount, 
     const salesCount = boxSalesCount[pieces] || 0
     const totalRevForBox = salesCount * price
     const shareOfTotal = totalRevenue > 0 ? (totalRevForBox / totalRevenue) * 100 : 0
-    return { label, pieces, price, totalCost, profit, margin, salesCount, totalRevForBox, shareOfTotal }
+    return { label, labelEn, pieces, price, totalCost, profit, margin, salesCount, totalRevForBox, shareOfTotal }
   }).sort((a, b) => b.margin - a.margin)
 
   const bestBox = boxData[0]
@@ -845,13 +866,13 @@ function BoxMarginsPanel({ ar, cur, avgCogPerPiece, cogPerPiece, boxSalesCount, 
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
           <p className="text-xs text-green-600 mb-1">{ar ? 'أعلى هامش ربح' : 'Best Margin'}</p>
-          <p className="text-xl font-bold text-green-700">{bestBox.label}</p>
+          <p className="text-xl font-bold text-green-700">{ar ? bestBox.label : bestBox.labelEn}</p>
           <p className="text-sm text-green-600">{bestBox.margin.toFixed(1)}%</p>
         </div>
         {mostSold.salesCount > 0 && (
           <div className="bg-jumar-brown text-white rounded-2xl p-4 text-center">
             <p className="text-xs text-white/60 mb-1">{ar ? 'الأكثر مبيعاً' : 'Best Seller'}</p>
-            <p className="text-xl font-bold text-jumar-gold">{mostSold.label}</p>
+            <p className="text-xl font-bold text-jumar-gold">{ar ? mostSold.label : mostSold.labelEn}</p>
             <p className="text-sm text-white/80">{mostSold.salesCount} {ar ? 'بيعة' : 'sales'}</p>
           </div>
         )}
@@ -868,7 +889,7 @@ function BoxMarginsPanel({ ar, cur, avgCogPerPiece, cogPerPiece, boxSalesCount, 
             <div key={box.pieces} className="p-4">
               <div className="flex justify-between items-center mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-gray-800">{box.label}</span>
+                  <span className="font-bold text-gray-800">{ar ? box.label : box.labelEn}</span>
                   <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${box.margin >= 50 ? 'bg-green-100 text-green-700' : box.margin >= 40 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'}`}>{box.margin.toFixed(1)}%</span>
                 </div>
                 <span className="font-bold text-jumar-brown">{fmt(box.price)} {cur}</span>
@@ -1822,7 +1843,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                       return (
                         <div key={ing} className="flex justify-between text-xs text-gray-600">
                           <span>{ar ? ing : (INGREDIENT_EN[ing] || ing)} ({grams}{ar ? 'ج' : 'g'})</span>
-                          <span>{cost.toFixed(2)} ج</span>
+                          <span>{cost.toFixed(2)} {cur}</span>
                         </div>
                       )
                     })}
@@ -1845,14 +1866,14 @@ function FinanceTab({ lang }: { lang: Lang }) {
                     <div className="mt-2 pt-2 border-t border-gray-100">
                       <p className="text-xs text-gray-400 mb-1">{ar ? 'هامش ربح العلب:' : 'Box margins:'}</p>
                       <div className="grid grid-cols-3 gap-1">
-                        {BOX_SIZES.map(({ label, pieces }) => {
+                        {BOX_SIZES.map(({ label, labelEn, pieces }) => {
                           const boxSale = pieces === 2 ? 70 : pieces === 5 ? 170 : pieces === 8 ? 260 : pieces === 15 ? 450 : 650
                           const boxCost = totalCost * pieces
                           const boxMargin = boxSale > 0 ? ((boxSale - boxCost) / boxSale * 100) : 0
                           return (
                             <div key={pieces} className="text-center bg-gray-50 rounded-lg p-2">
-                              <p className="text-xs text-gray-500">{label}</p>
-                              <p className="text-xs font-bold text-jumar-brown">{boxSale}ج</p>
+                              <p className="text-xs text-gray-500">{ar ? label : labelEn}</p>
+                              <p className="text-xs font-bold text-jumar-brown">{boxSale}{cur}</p>
                               <p className={`text-xs font-bold ${boxMargin >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmtPct(boxMargin)}</p>
                             </div>
                           )
@@ -2083,8 +2104,8 @@ function FinanceTab({ lang }: { lang: Lang }) {
                 <div key={b.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
                   <div className={`px-4 py-3 flex justify-between items-center ${netProfit >= 0 ? 'bg-jumar-brown' : 'bg-red-600'}`}>
                     <div>
-                      <p className="font-bold text-white">{b.name}</p>
-                      <p className="text-xs text-white/60">{b.location} · {days} {ar ? 'أيام' : 'days'}</p>
+                      <p className="font-bold text-white">{ar ? b.name : (BAZAAR_EN[b.name] || b.name)}</p>
+                      <p className="text-xs text-white/60">{ar ? b.location : (BAZAAR_LOCATION_EN[b.location] || b.location)} · {days} {ar ? 'أيام' : 'days'}</p>
                     </div>
                     <div className="text-left">
                       <p className="text-2xl font-bold text-jumar-gold">{roi !== null ? `${roi.toFixed(0)}%` : '—'}</p>
@@ -2597,7 +2618,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
 
             {/* نصيحة */}
             <div className="bg-jumar-brown text-white rounded-2xl p-4">
-              <p className="text-sm font-bold text-jumar-gold mb-2">💡 {ar ? 'خامات تحتاج شراء الأسبوع الجاي' : 'Needs reorder next week'}</p>
+              <p className="text-sm font-bold text-jumar-gold mb-2">💡 {ar ? 'خامات تحتاج شراء الشهر الجاي' : 'Needs reorder this month'}</p>
               <div className="space-y-1">
                 {ingredients.filter(ing => {
                   const dailyUse = (totalIngUse[ing.name] || 0) / daysActive
@@ -2643,7 +2664,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                     <label className="text-xs text-gray-500 block mb-1">{ar ? 'الخامة' : 'Ingredient'}</label>
                     <select required value={priceForm.ingredient_name} onChange={e => setPriceForm({...priceForm, ingredient_name: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold">
                       <option value="">{ar ? 'اختار خامة' : 'Select'}</option>
-                      {DEFAULT_INGREDIENTS.map(i => <option key={i.name} value={i.name}>{i.name}</option>)}
+                      {DEFAULT_INGREDIENTS.map(i => <option key={i.name} value={i.name}>{ar ? i.name : (INGREDIENT_EN[i.name] || i.name)}</option>)}
                     </select>
                   </div>
                   <div>
@@ -2668,7 +2689,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                     {priceHistory.slice(0, 8).map(p => (
                       <div key={p.effective_date + p.ingredient_name} className="flex justify-between text-xs text-gray-600">
                         <span>{p.ingredient_name}</span>
-                        <span className="text-jumar-gold font-bold">{p.cost_per_gram} ج/ج</span>
+                        <span className="text-jumar-gold font-bold">{p.cost_per_gram} {ar ? 'ج/ج' : 'EGP/g'}</span>
                         <span className="text-gray-400">{p.effective_date.substring(0, 7)}</span>
                       </div>
                     ))}
