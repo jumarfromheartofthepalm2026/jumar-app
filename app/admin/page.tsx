@@ -1091,13 +1091,27 @@ function FinanceTab({ lang }: { lang: Lang }) {
   // ── مخزون آمن وفرصة ضايعة ──────────────────────────────────────────────────
   // أيام المخزون المتبقية لكل خامة (min across all)
   const daysActive = Object.keys(Object.fromEntries(sales.map(s => [s.sale_date, 1]))).length || 1
+  // الاستهلاك الفعلي لكل خامة بناءً على qty كل منتج
+  const PRODUCT_QTY_KEY: Record<string, keyof Sale> = {
+    'تمرية الطحينة': 'qty_tamriya', 'فدج الكاجو': 'qty_fudge',
+    'سلطانة الفستق': 'qty_sultana', 'سنيكرز الفول': 'qty_snickers_fool',
+    'سنيكرز البندق': 'qty_snickers_bunduq',
+  }
+  const totalIngUse: Record<string, number> = {}
+  sales.forEach(s => {
+    Object.entries(RECIPES).forEach(([product, recipe]) => {
+      const qtyKey = PRODUCT_QTY_KEY[product]
+      const qty = qtyKey ? Number(s[qtyKey] || 0) : 0
+      Object.entries(recipe).forEach(([ingName, grams]) => {
+        totalIngUse[ingName] = (totalIngUse[ingName] || 0) + qty * grams
+      })
+    })
+  })
   let minDaysLeft = Infinity
   let criticalIngredient = ''
   ingredients.forEach(ing => {
-    let dailyUse = 0
-    Object.values(RECIPES).forEach(recipe => {
-      if (recipe[ing.name]) dailyUse += (recipe[ing.name] * totalQtySold) / daysActive
-    })
+    const totalUsed = totalIngUse[ing.name] || 0
+    const dailyUse = totalUsed / daysActive
     if (dailyUse > 0) {
       const days = ing.stock_grams / dailyUse
       if (days < minDaysLeft) { minDaysLeft = days; criticalIngredient = ing.name }
@@ -1671,11 +1685,8 @@ function FinanceTab({ lang }: { lang: Lang }) {
               {ingredients.map(ing => {
                 // كمية يومية مستخدمة بناءً على حركة المخزون
                 const daysData = Object.keys(Object.fromEntries(sales.map(s => [s.sale_date, 1]))).length || 1
-                // تقدير الاستهلاك اليومي من RECIPES
-                let dailyUse = 0
-                Object.values(RECIPES).forEach(recipe => {
-                  if (recipe[ing.name]) dailyUse += (recipe[ing.name] * totalQtySold) / daysData
-                })
+                // تقدير الاستهلاك اليومي من RECIPES بناءً على qty فعلي
+                const dailyUse = (totalIngUse[ing.name] || 0) / daysData
                 const daysLeft = dailyUse > 0 ? Math.round(ing.stock_grams / dailyUse) : null
                 const stockValue = ing.stock_grams * ing.cost_per_gram
                 const isLow = ing.stock_grams < ing.min_stock
@@ -2366,10 +2377,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
               </div>
               <div className="divide-y divide-gray-50">
                 {ingredients.filter(ing => Object.values(RECIPES).some(r => r[ing.name])).map(ing => {
-                  let dailyUse = 0
-                  Object.values(RECIPES).forEach(recipe => {
-                    if (recipe[ing.name]) dailyUse += (recipe[ing.name] * totalQtySold) / daysActive
-                  })
+                  const dailyUse = (totalIngUse[ing.name] || 0) / daysActive
                   const daysLeft = dailyUse > 0 ? Math.round(ing.stock_grams / dailyUse) : null
                   const isCritical = daysLeft !== null && daysLeft <= 5
                   const isLow = daysLeft !== null && daysLeft <= 14
@@ -2400,14 +2408,11 @@ function FinanceTab({ lang }: { lang: Lang }) {
               <p className="text-sm font-bold text-jumar-gold mb-2">💡 {ar ? 'خامات تحتاج شراء الأسبوع الجاي' : 'Needs reorder next week'}</p>
               <div className="space-y-1">
                 {ingredients.filter(ing => {
-                  let dailyUse = 0
-                  Object.values(RECIPES).forEach(recipe => { if (recipe[ing.name]) dailyUse += (recipe[ing.name] * totalQtySold) / daysActive })
-                  const days = dailyUse > 0 ? ing.stock_grams / dailyUse : Infinity
-                  return days <= 14 && days > 0
+                  const dailyUse = (totalIngUse[ing.name] || 0) / daysActive
+                  return dailyUse > 0 && ing.stock_grams / dailyUse <= 14
                 }).map(ing => {
-                  let dailyUse = 0
-                  Object.values(RECIPES).forEach(recipe => { if (recipe[ing.name]) dailyUse += (recipe[ing.name] * totalQtySold) / daysActive })
-                  const needed = Math.ceil(dailyUse * 30) // شراء لشهر
+                  const dailyUse = (totalIngUse[ing.name] || 0) / daysActive
+                  const needed = Math.ceil(dailyUse * 30)
                   return (
                     <div key={ing.id} className="flex justify-between text-sm">
                       <span className="text-white/80">{ar ? ing.name : (INGREDIENT_EN[ing.name] || ing.name)}</span>
@@ -2416,8 +2421,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                   )
                 })}
                 {ingredients.filter(ing => {
-                  let dailyUse = 0
-                  Object.values(RECIPES).forEach(recipe => { if (recipe[ing.name]) dailyUse += (recipe[ing.name] * totalQtySold) / daysActive })
+                  const dailyUse = (totalIngUse[ing.name] || 0) / daysActive
                   return dailyUse > 0 && ing.stock_grams / dailyUse <= 14
                 }).length === 0 && (
                   <p className="text-white/60 text-sm">{ar ? 'مفيش خامات تحتاج شراء دلوقتي ✅' : 'No reorders needed now ✅'}</p>
