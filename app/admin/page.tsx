@@ -1563,7 +1563,9 @@ function FinanceTab({ lang }: { lang: Lang }) {
             }, 0))
             return costs.length ? costs.reduce((a, x) => a + x, 0) / costs.length : 7.3
           })()
-          const mCOGS = mQtySold > 0 ? mQtySold * mAvgCOG : (mRevenue * 0.54)  // تقديري لو مفيش qty
+          const mCOGSIngredients = mQtySold > 0 ? mQtySold * mAvgCOG : (mRevenue * 0.54)
+          const mCOGSAdjustment = mExpByCategory['خامات'] || 0  // تسويات COGS مسجلة في expenses
+          const mCOGS = mCOGSIngredients + mCOGSAdjustment
           const mGrossProfit = mRevenue - mCOGS
           const mGrossMargin = mRevenue > 0 ? (mGrossProfit / mRevenue) * 100 : 0
 
@@ -1684,7 +1686,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                     <div className="flex justify-between"><span className="font-bold text-sm text-gray-700">= {ar ? 'إجمالي الربح' : 'Gross Profit'}</span><span className="font-bold text-green-600">{fmt(mGrossProfit)} {cur}</span></div>
                     <p className="text-xs text-jumar-gold mt-0.5">{ar ? 'هامش إجمالي' : 'Gross margin'}: {mGrossMargin.toFixed(1)}% {mGrossMargin >= 40 ? '✅' : mGrossMargin >= 30 ? '⚠️' : '❌'}</p>
                   </div>
-                  {Object.entries(mExpByCategory).filter(([,v]) => v > 0).sort(([,a],[,b]) => b-a).map(([cat, v]) => (
+                  {Object.entries(mExpByCategory).filter(([cat,v]) => v > 0 && cat !== 'خامات').sort(([,a],[,b]) => b-a).map(([cat, v]) => (
                     <Row key={cat} label={`(-) ${cat}`} value={`−${fmt(v)} ${cur}`} color="text-red-400" indent />
                   ))}
                   {mGiftQty > 0 && <Row label={`(-) ${ar ? `هدايا (${mGiftQty} قطعة)` : `Gifts (${mGiftQty} pcs)`}`} value={`−${fmt(mGiftQty * (mAvgCOG + PACKAGING_COST_PER_PIECE))} ${cur}`} color="text-orange-400" indent />}
