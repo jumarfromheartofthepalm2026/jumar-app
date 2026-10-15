@@ -141,6 +141,14 @@ const INGREDIENT_EN: Record<string, string> = {
   'لوز':            'Almonds',
   'جوز':            'Walnuts',
   'بذور شيا':       'Chia Seeds',
+  'دقيق لوز':       'Almond Flour',
+  'دقيق قمح':       'Wheat Flour',
+  'دقيق جوز الهند': 'Coconut Flour',
+  'بروتين':         'Protein Powder',
+  'فانيليا':        'Vanilla',
+  'ملح':            'Salt',
+  'شوكولاتة حليب':  'Milk Chocolate',
+  'شوكولاتة بيضاء': 'White Chocolate',
 }
 const BAZAAR_EN: Record<string, string> = {
   'بازار لوتس': 'Lotus Bazaar',
@@ -2337,7 +2345,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
               {/* ١. الإيرادات */}
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 bg-green-50">
-                  <h3 className="font-bold text-green-700">١. {ar ? 'الإيرادات' : 'Revenue'}</h3>
+                  <h3 className="font-bold text-green-700">{ar ? '١' : '1'}. {ar ? 'الإيرادات' : 'Revenue'}</h3>
                 </div>
                 <div className="divide-y divide-gray-50">
                   <Row label={ar ? 'إجمالي الإيرادات' : 'Total Revenue'} value={`${fmt(mRevenue)} ${cur}`} color="text-green-600" bold />
@@ -2365,7 +2373,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
               {/* ٢. P&L */}
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 bg-blue-50">
-                  <h3 className="font-bold text-blue-700">٢. {ar ? 'قائمة الأرباح والخسائر' : 'Profit & Loss'}</h3>
+                  <h3 className="font-bold text-blue-700">{ar ? '٢' : '2'}. {ar ? 'قائمة الأرباح والخسائر' : 'Profit & Loss'}</h3>
                 </div>
                 <div className="divide-y divide-gray-50">
                   <Row label={ar ? 'إجمالي الإيرادات' : 'Revenue'} value={`${fmt(mRevenue)} ${cur}`} color="text-green-600" bold />
@@ -2389,7 +2397,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
               {mTotalExpenses > 0 && (
                 <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                   <div className="px-4 py-3 border-b border-gray-100 bg-red-50">
-                    <h3 className="font-bold text-red-700">٣. {ar ? 'تفاصيل المصروفات' : 'Expense Breakdown'}</h3>
+                    <h3 className="font-bold text-red-700">{ar ? '٣' : '3'}. {ar ? 'تفاصيل المصروفات' : 'Expense Breakdown'}</h3>
                     <p className="text-xs text-red-400 mt-0.5">{ar ? `الإجمالي: ${fmt(mTotalExpenses)} ${cur}` : `Total: ${fmt(mTotalExpenses)} ${cur}`}</p>
                   </div>
                   <div className="divide-y divide-gray-50">
