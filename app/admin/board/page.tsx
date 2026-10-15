@@ -133,9 +133,24 @@ const INGREDIENT_EN: Record<string, string> = {
   'زيت جوز الهند':  'Coconut Oil',
   'مشمش مجفف':      'Dried Apricots',
   'مشمش':           'Apricots',
+  'توت بري':        'Blueberries',
+  'توت':            'Berries',
+  'عسل':            'Honey',
+  'قرفة':           'Cinnamon',
+  'هيل':            'Cardamom',
+  'لوز':            'Almonds',
+  'جوز':            'Walnuts',
+  'بذور شيا':       'Chia Seeds',
 }
 const BAZAAR_EN: Record<string, string> = {
   'بازار لوتس': 'Lotus Bazaar',
+}
+const BAZAAR_LOCATION_EN: Record<string, string> = {
+  'لوتس': 'Lotus',
+  'الجاردينيا': 'Gardenia',
+  'التجمع': 'Fifth Settlement',
+  'مدينتي': 'Madinaty',
+  'القاهرة الجديدة': 'New Cairo',
 }
 
 const CUSTOMER_TYPE_EN: Record<string, string> = {
@@ -2090,7 +2105,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                   <div className={`px-4 py-3 flex justify-between items-center ${netProfit >= 0 ? 'bg-jumar-brown' : 'bg-red-600'}`}>
                     <div>
                       <p className="font-bold text-white">{ar ? b.name : (BAZAAR_EN[b.name] || b.name)}</p>
-                      <p className="text-xs text-white/60">{b.location} · {days} {ar ? 'أيام' : 'days'}</p>
+                      <p className="text-xs text-white/60">{ar ? b.location : (BAZAAR_LOCATION_EN[b.location] || b.location)} · {days} {ar ? 'أيام' : 'days'}</p>
                     </div>
                     <div className="text-left">
                       <p className="text-2xl font-bold text-jumar-gold">{roi !== null ? `${roi.toFixed(0)}%` : '—'}</p>
@@ -2649,7 +2664,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                     <label className="text-xs text-gray-500 block mb-1">{ar ? 'الخامة' : 'Ingredient'}</label>
                     <select required value={priceForm.ingredient_name} onChange={e => setPriceForm({...priceForm, ingredient_name: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold">
                       <option value="">{ar ? 'اختار خامة' : 'Select'}</option>
-                      {DEFAULT_INGREDIENTS.map(i => <option key={i.name} value={i.name}>{i.name}</option>)}
+                      {DEFAULT_INGREDIENTS.map(i => <option key={i.name} value={i.name}>{ar ? i.name : (INGREDIENT_EN[i.name] || i.name)}</option>)}
                     </select>
                   </div>
                   <div>
