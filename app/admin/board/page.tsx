@@ -44,6 +44,8 @@ export default function BoardPage() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading]   = useState(true)
   const [refreshed, setRefreshed] = useState('')
+  const [lang, setLang]         = useState<'ar'|'en'>('en')
+  const ar = lang === 'ar'
 
   async function load() {
     setLoading(true)
@@ -179,23 +181,28 @@ export default function BoardPage() {
   const expenseChange = lastExpenses > 0 ? ((thisExpenses - lastExpenses) / lastExpenses) * 100 : 0
 
   // ── Q4 Projections ──────────────────────────────────────────────────────────
-  // Use MoM growth rate from last 3 months for smoother projection
+  // Use only COMPLETED months for growth rate (exclude current MTD month)
+  const completedMonths = allMonths.filter(k => k < thisMonth)
   const growthRates: number[] = []
-  for (let i = 1; i < last3Months.length; i++) {
-    const prev = mRev(last3Months[i-1])
-    const curr = mRev(last3Months[i])
+  for (let i = 1; i < completedMonths.length; i++) {
+    const prev = mRev(completedMonths[i-1])
+    const curr = mRev(completedMonths[i])
     if (prev > 0) growthRates.push((curr - prev) / prev)
   }
-  if (lastRevenue > 0 && thisRevenue > 0) growthRates.push((thisRevenue - lastRevenue) / lastRevenue)
-  const smoothGrowthRate = growthRates.length > 0
+  // Cap growth rate between -30% and +100% to avoid outlier distortion
+  const rawGrowthRate = growthRates.length > 0
     ? growthRates.reduce((s,r) => s+r, 0) / growthRates.length
-    : 0.1 // assume 10% if no data
+    : 0.1
+  const smoothGrowthRate = Math.max(-0.3, Math.min(1.0, rawGrowthRate))
 
-  // Project next 3 months from thisRevenue
+  // Project from last completed month's revenue
+  const baseRevenue = lastRevenue > 0 ? lastRevenue : avgMonthlyRevenue
+
+  // Project next 3 months starting from next month
   const projMonths = [1, 2, 3].map(offset => {
     const d = new Date(now.getFullYear(), now.getMonth() + offset, 1)
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
-    const projRev = thisRevenue * Math.pow(1 + smoothGrowthRate, offset)
+    const projRev = baseRevenue * Math.pow(1 + smoothGrowthRate, offset)
     const projExp = avgMonthlyBurn // assume expenses stay flat
     return { key, label: monthLabel(key), projRev, projExp, projNet: projRev - projExp }
   })
@@ -243,64 +250,90 @@ export default function BoardPage() {
     <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center">
       <div className="text-center">
         <div className="text-4xl mb-3">🌿</div>
-        <p className="text-[#7C4A00] font-semibold">Loading Board Dashboard…</p>
+        <p className="text-[#7C4A00] font-semibold">{ar ? 'جاري تحميل لوحة المجلس…' : 'Loading Board Dashboard…'}</p>
       </div>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-[#FAFAF7]" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+    <>
+    <style>{`
+      @media print {
+        header button, header .text-xs.text-white\\/60, header p.text-sm { display: none !important; }
+        header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        body { background: white !important; }
+        @page { margin: 16mm; size: A4; }
+      }
+    `}</style>
+    <div className="min-h-screen bg-[#FAFAF7]" dir={ar ? 'rtl' : 'ltr'} style={{ fontFamily: ar ? "'Cairo', 'Segoe UI', system-ui, sans-serif" : "'Segoe UI', system-ui, sans-serif" }}>
 
       {/* ── Header ── */}
       <header className="bg-[#3B2000] text-white px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-2xl">🌿</span>
           <div>
-            <h1 className="text-lg font-bold tracking-wide">JUMAR</h1>
-            <p className="text-xs text-[#C4922A] font-medium tracking-widest uppercase">Board Dashboard</p>
+            <h1 className="text-lg font-bold tracking-wide">{ar ? 'جُمار' : 'JUMAR'}</h1>
+            <p className="text-xs text-[#C4922A] font-medium tracking-widest uppercase">{ar ? 'لوحة مجلس الإدارة' : 'Board Dashboard'}</p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-xs text-white/60">Last updated</p>
-          <p className="text-sm font-semibold">{refreshed}</p>
-          <button onClick={load} className="mt-1 text-xs text-[#C4922A] hover:text-[#E8B84B] transition-colors">↻ Refresh</button>
+        <div className={`flex items-center gap-3 ${ar ? 'flex-row-reverse' : ''}`}>
+          {/* Language toggle */}
+          <button
+            onClick={() => setLang(ar ? 'en' : 'ar')}
+            className="text-xs bg-white/10 hover:bg-white/20 transition-colors px-3 py-1.5 rounded-full font-bold tracking-wide"
+          >
+            {ar ? 'EN' : 'عربي'}
+          </button>
+          {/* PDF Print */}
+          <button
+            onClick={() => window.print()}
+            className="text-xs bg-[#C4922A] hover:bg-[#E8B84B] transition-colors text-[#3B2000] font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5"
+          >
+            <span>🖨️</span> {ar ? 'طباعة PDF' : 'Print PDF'}
+          </button>
+          <div className={ar ? 'text-left' : 'text-right'}>
+            <p className="text-xs text-white/60">{ar ? 'آخر تحديث' : 'Last updated'}</p>
+            <p className="text-sm font-semibold">{refreshed}</p>
+            <button onClick={load} className="mt-1 text-xs text-[#C4922A] hover:text-[#E8B84B] transition-colors">↻ {ar ? 'تحديث' : 'Refresh'}</button>
+          </div>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
 
         {/* ── Section label ── */}
-        <SectionLabel>Key Performance Indicators</SectionLabel>
+        <SectionLabel>{ar ? 'مؤشرات الأداء الرئيسية' : 'Key Performance Indicators'}</SectionLabel>
 
         {/* ── KPI Cards ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <KPICard
-            label="Total Revenue"
+            label={ar ? 'إجمالي الإيرادات' : 'Total Revenue'}
             value={fmtEGP(totalRevenue)}
-            sub={`This month: ${fmtEGP(thisRevenue)}`}
+            sub={`${ar ? 'هذا الشهر' : 'This month'}: ${fmtEGP(thisRevenue)}`}
             trend={revenueGrowth}
             icon="💰"
             accent="#7C4A00"
           />
           <KPICard
-            label="Net Position"
+            label={ar ? 'صافي الموقف المالي' : 'Net Position'}
             value={fmtEGP(netPosition)}
-            sub={`Margin: ${pct(netPosition, totalRevenue)}`}
+            sub={`${ar ? 'هامش الربح' : 'Margin'}: ${pct(netPosition, totalRevenue)}`}
             icon={netPosition >= 0 ? '📈' : '📉'}
             accent={netPosition >= 0 ? '#4CAF7D' : '#E53935'}
             valueColor={netPosition >= 0 ? '#2E7D32' : '#C62828'}
           />
           <KPICard
-            label="Units Sold (MTD)"
+            label={ar ? 'وحدات مباعة (الشهر الحالي)' : 'Units Sold (MTD)'}
             value={fmt(thisUnits)}
-            sub={`AOV: ${fmtEGP(aov)}`}
+            sub={`${ar ? 'متوسط قيمة الطلب' : 'AOV'}: ${fmtEGP(aov)}`}
             icon="📦"
             accent="#C4922A"
           />
           <KPICard
-            label="Total Expenses"
+            label={ar ? 'إجمالي المصروفات' : 'Total Expenses'}
             value={fmtEGP(totalExpenses)}
-            sub={`MoM: ${expenseChange >= 0 ? '+' : ''}${expenseChange.toFixed(1)}%`}
+            sub={`${ar ? 'شهر/شهر' : 'MoM'}: ${expenseChange >= 0 ? '+' : ''}${expenseChange.toFixed(1)}%`}
             trend={-expenseChange}
             icon="🧾"
             accent="#607D8B"
@@ -308,24 +341,24 @@ export default function BoardPage() {
         </div>
 
         {/* ── Forward-Looking: Runway + Break-even ── */}
-        <SectionLabel>Financial Outlook</SectionLabel>
+        <SectionLabel>{ar ? 'التوقعات المالية' : 'Financial Outlook'}</SectionLabel>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
           {/* Cash Runway */}
           <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] p-5 flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <span className="text-xl">🏦</span>
-              <h3 className="font-semibold text-[#3B2000] text-sm uppercase tracking-wide">Cash Runway</h3>
+              <h3 className="font-semibold text-[#3B2000] text-sm uppercase tracking-wide">{ar ? 'الاحتياطي النقدي' : 'Cash Runway'}</h3>
             </div>
             {runwayMonths === null ? (
               <>
                 <p className="text-3xl font-black text-green-700">∞</p>
-                <p className="text-xs text-gray-500">Revenue exceeds expenses — self-sustaining</p>
+                <p className="text-xs text-gray-500">{ar ? 'الإيرادات تغطي المصروفات — مستدام ذاتياً' : 'Revenue exceeds expenses — self-sustaining'}</p>
               </>
             ) : (
               <>
                 <p className="text-3xl font-black" style={{ color: runwayMonths < 3 ? '#C62828' : runwayMonths < 6 ? '#E65100' : '#2E7D32' }}>
-                  {runwayMonths < 1 ? '&lt;1' : runwayMonths.toFixed(1)} mo
+                  {runwayMonths < 1 ? '<1' : runwayMonths.toFixed(1)} {ar ? 'شهر' : 'mo'}
                 </p>
                 <div className="w-full bg-[#F0E8DC] rounded-full h-2">
                   <div
@@ -336,7 +369,7 @@ export default function BoardPage() {
                     }}
                   />
                 </div>
-                <p className="text-xs text-gray-500">Based on avg monthly burn of {fmtEGP(avgMonthlyBurn)} vs avg revenue {fmtEGP(avgMonthlyRevenue)}</p>
+                <p className="text-xs text-gray-500">{ar ? `بناءً على متوسط الإنفاق الشهري ${fmtEGP(avgMonthlyBurn)} مقابل إيرادات ${fmtEGP(avgMonthlyRevenue)}` : `Based on avg monthly burn of ${fmtEGP(avgMonthlyBurn)} vs avg revenue ${fmtEGP(avgMonthlyRevenue)}`}</p>
               </>
             )}
           </div>
@@ -345,23 +378,23 @@ export default function BoardPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] p-5 flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <span className="text-xl">🎯</span>
-              <h3 className="font-semibold text-[#3B2000] text-sm uppercase tracking-wide">Break-even</h3>
+              <h3 className="font-semibold text-[#3B2000] text-sm uppercase tracking-wide">{ar ? 'نقطة التعادل' : 'Break-even'}</h3>
             </div>
             {breakEvenMonths === 0 ? (
               <>
-                <p className="text-3xl font-black text-green-700">Now ✓</p>
-                <p className="text-xs text-gray-500">This month&apos;s revenue covers operating expenses</p>
+                <p className="text-3xl font-black text-green-700">{ar ? 'الآن ✓' : 'Now ✓'}</p>
+                <p className="text-xs text-gray-500">{ar ? 'إيرادات هذا الشهر تغطي المصروفات التشغيلية' : "This month's revenue covers operating expenses"}</p>
               </>
             ) : breakEvenMonths === null ? (
               <>
                 <p className="text-3xl font-black text-gray-400">—</p>
-                <p className="text-xs text-gray-500">Insufficient growth data to project</p>
+                <p className="text-xs text-gray-500">{ar ? 'بيانات نمو غير كافية للتوقع' : 'Insufficient growth data to project'}</p>
               </>
             ) : (
               <>
-                <p className="text-3xl font-black text-[#7C4A00]">~{breakEvenMonths} mo</p>
+                <p className="text-3xl font-black text-[#7C4A00]">~{breakEvenMonths} {ar ? 'شهر' : 'mo'}</p>
                 <p className="text-xs text-gray-500">
-                  At {(revenueGrowthRate * 100).toFixed(1)}% MoM growth, monthly revenue will cover avg expenses of {fmtEGP(avgMonthlyBurn)}
+                  {ar ? `بمعدل نمو ${(revenueGrowthRate * 100).toFixed(1)}% شهرياً، ستغطي الإيرادات متوسط المصروفات ${fmtEGP(avgMonthlyBurn)}` : `At ${(revenueGrowthRate * 100).toFixed(1)}% MoM growth, monthly revenue will cover avg expenses of ${fmtEGP(avgMonthlyBurn)}`}
                 </p>
               </>
             )}
@@ -371,24 +404,24 @@ export default function BoardPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] p-5 flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <span className="text-xl">⚡</span>
-              <h3 className="font-semibold text-[#3B2000] text-sm uppercase tracking-wide">Sales Velocity</h3>
+              <h3 className="font-semibold text-[#3B2000] text-sm uppercase tracking-wide">{ar ? 'سرعة المبيعات' : 'Sales Velocity'}</h3>
             </div>
             <p className="text-3xl font-black text-[#C4922A]">{Math.round(avgUnitsPerMonth)}</p>
-            <p className="text-xs text-gray-500">Avg units/month over {monthsActive} month{monthsActive !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-gray-500">{ar ? `متوسط الوحدات/شهر خلال ${monthsActive} شهر` : `Avg units/month over ${monthsActive} month${monthsActive !== 1 ? 's' : ''}`}</p>
             <div className="pt-1 border-t border-[#F0E8DC]">
-              <p className="text-xs text-gray-400">Avg revenue/month</p>
+              <p className="text-xs text-gray-400">{ar ? 'متوسط الإيرادات/شهر' : 'Avg revenue/month'}</p>
               <p className="text-sm font-bold text-[#7C4A00]">{fmtEGP(avgMonthlyRevenue)}</p>
             </div>
           </div>
         </div>
 
         {/* ── Q4 Outlook ── */}
-        <SectionLabel>Q4 Outlook &amp; Action Plan</SectionLabel>
+        <SectionLabel>{ar ? 'توقعات الربع الرابع وخطة العمل' : 'Q4 Outlook & Action Plan'}</SectionLabel>
 
         {/* Projection note */}
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 text-xs text-amber-700 flex items-center gap-2">
           <span>📊</span>
-          <span>Projections based on {(smoothGrowthRate * 100).toFixed(1)}% avg MoM revenue growth · Expenses held flat at {fmtEGP(avgMonthlyBurn)}/mo · Not a guarantee</span>
+          <span>{ar ? `التوقعات مبنية على معدل نمو إيرادات شهري ${(smoothGrowthRate * 100).toFixed(1)}% · المصروفات ثابتة عند ${fmtEGP(avgMonthlyBurn)}/شهر · ليست ضماناً` : `Projections based on ${(smoothGrowthRate * 100).toFixed(1)}% avg MoM revenue growth · Expenses held flat at ${fmtEGP(avgMonthlyBurn)}/mo · Not a guarantee`}</span>
         </div>
 
         {/* 3-month revenue + cash forecast */}
@@ -397,30 +430,30 @@ export default function BoardPage() {
             <div key={m.key} className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-[#9E7340] tracking-widest uppercase">{m.label}</span>
-                <span className="text-xs bg-[#F5EFE6] text-[#7C4A00] px-2 py-0.5 rounded-full font-semibold">Projected</span>
+                <span className="text-xs bg-[#F5EFE6] text-[#7C4A00] px-2 py-0.5 rounded-full font-semibold">{ar ? 'متوقع' : 'Projected'}</span>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Revenue</span>
+                  <span className="text-gray-500">{ar ? 'الإيرادات' : 'Revenue'}</span>
                   <span className="font-bold text-[#7C4A00]">{fmtEGP(m.projRev)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Expenses</span>
+                  <span className="text-gray-500">{ar ? 'المصروفات' : 'Expenses'}</span>
                   <span className="text-gray-600">{fmtEGP(m.projExp)}</span>
                 </div>
                 <div className="flex justify-between text-sm border-t border-[#F0E8DC] pt-2">
-                  <span className="text-gray-500">Monthly Net</span>
+                  <span className="text-gray-500">{ar ? 'صافي الشهر' : 'Monthly Net'}</span>
                   <span className={`font-bold ${m.projNet >= 0 ? 'text-green-700' : 'text-red-600'}`}>{fmtEGP(m.projNet)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Cum. Cash</span>
+                  <span className="text-gray-500">{ar ? 'رصيد متراكم' : 'Cum. Cash'}</span>
                   <span className={`font-semibold text-xs ${m.cumCash >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmtEGP(m.cumCash)}</span>
                 </div>
               </div>
               {/* Progress bar toward break-even */}
               <div className="mt-3">
                 <div className="flex justify-between text-xs text-gray-400 mb-1">
-                  <span>Rev vs Expenses</span>
+                  <span>{ar ? 'الإيرادات مقابل المصروفات' : 'Rev vs Expenses'}</span>
                   <span>{Math.min(100, (m.projRev / m.projExp * 100)).toFixed(0)}%</span>
                 </div>
                 <div className="w-full bg-[#F0E8DC] rounded-full h-1.5">
@@ -433,7 +466,7 @@ export default function BoardPage() {
                   />
                 </div>
                 {m.projRev >= m.projExp && (
-                  <p className="text-xs text-green-600 font-semibold mt-1">✓ Break-even reached</p>
+                  <p className="text-xs text-green-600 font-semibold mt-1">✓ {ar ? 'تم الوصول لنقطة التعادل' : 'Break-even reached'}</p>
                 )}
               </div>
             </div>
@@ -446,14 +479,38 @@ export default function BoardPage() {
           {/* Action Plan */}
           <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] p-5">
             <h3 className="font-semibold text-[#3B2000] mb-4 text-sm uppercase tracking-wide flex items-center gap-2">
-              <span>🎯</span> Q4 Action Plan
+              <span>🎯</span> {ar ? 'خطة العمل للربع الرابع' : 'Q4 Action Plan'}
             </h3>
             <div className="space-y-3">
               {[
-                { icon: '🏪', title: 'Expand Bazaar Presence', desc: 'Target 2+ new bazaar locations (Wadi Degla, Madinaty) to replicate Lotus Bazaar success', status: 'priority' },
-                { icon: '📱', title: 'Activate Online Channel', desc: 'Launch structured Instagram/online ordering to convert existing followers into recurring buyers', status: 'priority' },
-                { icon: '🍫', title: 'New SKU Launch', desc: 'Introduce 1–2 new products based on top performers: Cashew Fudge & Pistachio Date variants', status: 'planned' },
-                { icon: '📦', title: 'Inventory Optimization', desc: 'Replenish critical stock (Hazelnuts, Coconut, Butter) to avoid lost sales during peak season', status: 'urgent' },
+                {
+                  icon: '🏪',
+                  title:  ar ? 'توسيع الحضور في البازارات'    : 'Expand Bazaar Presence',
+                  desc:   ar ? 'استهداف موقعين+ جديدين (وادي دجلة، مدينتي) لتكرار نجاح بازار اللوتس' : 'Target 2+ new bazaar locations (Wadi Degla, Madinaty) to replicate Lotus Bazaar success',
+                  status: ar ? 'أولوية' : 'priority',
+                  statusEn: 'priority'
+                },
+                {
+                  icon: '📱',
+                  title:  ar ? 'تفعيل قناة الأونلاين'          : 'Activate Online Channel',
+                  desc:   ar ? 'إطلاق طلبات منظمة عبر إنستجرام لتحويل المتابعين إلى مشترين متكررين' : 'Launch structured Instagram/online ordering to convert existing followers into recurring buyers',
+                  status: ar ? 'أولوية' : 'priority',
+                  statusEn: 'priority'
+                },
+                {
+                  icon: '🍫',
+                  title:  ar ? 'إطلاق منتجات جديدة'           : 'New SKU Launch',
+                  desc:   ar ? 'تقديم 1–2 منتج جديد بناءً على أفضل المبيعات: كاجو فدج وبستاشيو بالتمر' : 'Introduce 1–2 new products based on top performers: Cashew Fudge & Pistachio Date variants',
+                  status: ar ? 'مخطط'   : 'planned',
+                  statusEn: 'planned'
+                },
+                {
+                  icon: '📦',
+                  title:  ar ? 'تحسين المخزون'                 : 'Inventory Optimization',
+                  desc:   ar ? 'تجديد المخزون الحرج (بندق، جوز هند، زبدة) لتجنب خسارة المبيعات في موسم الذروة' : 'Replenish critical stock (Hazelnuts, Coconut, Butter) to avoid lost sales during peak season',
+                  status: ar ? 'عاجل'   : 'urgent',
+                  statusEn: 'urgent'
+                },
               ].map((item, i) => (
                 <div key={i} className="flex gap-3 items-start">
                   <span className="text-lg flex-shrink-0 mt-0.5">{item.icon}</span>
@@ -461,8 +518,8 @@ export default function BoardPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-semibold text-[#3B2000]">{item.title}</p>
                       <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
-                        item.status === 'urgent' ? 'bg-red-100 text-red-700' :
-                        item.status === 'priority' ? 'bg-amber-100 text-amber-700' :
+                        item.statusEn === 'urgent'   ? 'bg-red-100 text-red-700' :
+                        item.statusEn === 'priority' ? 'bg-amber-100 text-amber-700' :
                         'bg-blue-100 text-blue-700'
                       }`}>{item.status}</span>
                     </div>
@@ -476,33 +533,33 @@ export default function BoardPage() {
           {/* Risks */}
           <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] p-5">
             <h3 className="font-semibold text-[#3B2000] mb-4 text-sm uppercase tracking-wide flex items-center gap-2">
-              <span>⚠️</span> Key Risks &amp; Mitigation
+              <span>⚠️</span> {ar ? 'المخاطر الرئيسية والتخفيف' : 'Key Risks & Mitigation'}
             </h3>
             <div className="space-y-4">
               {[
                 {
-                  risk: 'Raw Material Price Volatility',
-                  impact: 'High',
-                  detail: 'Dates & nuts prices can spike seasonally — directly compresses margins.',
-                  mitigation: 'Lock in bulk purchases before Q4 peak; review pricing quarterly.',
+                  risk:       ar ? 'تقلب أسعار المواد الخام'      : 'Raw Material Price Volatility',
+                  impact:     ar ? 'عالي'                          : 'High',
+                  detail:     ar ? 'أسعار التمور والمكسرات قد ترتفع موسمياً — يضغط مباشرة على الهوامش.' : 'Dates & nuts prices can spike seasonally — directly compresses margins.',
+                  mitigation: ar ? 'تأمين مشتريات بالجملة قبل ذروة الربع الرابع؛ مراجعة الأسعار ربع سنوياً.' : 'Lock in bulk purchases before Q4 peak; review pricing quarterly.',
                   color: '#E53935'
                 },
                 {
-                  risk: 'Cash Runway Pressure',
-                  impact: 'High',
-                  detail: `Current runway ~${runwayMonths !== null ? runwayMonths.toFixed(1) + ' mo' : '∞'} — tight if revenue growth slows.`,
-                  mitigation: 'Prioritize high-AOV channels (bazaars); defer non-essential CAPEX.',
+                  risk:       ar ? 'ضغط الاحتياطي النقدي'         : 'Cash Runway Pressure',
+                  impact:     ar ? 'عالي'                          : 'High',
+                  detail:     ar ? `الاحتياطي الحالي ~${runwayMonths !== null ? runwayMonths.toFixed(1) + ' شهر' : '∞'} — ضيق إذا تباطأ النمو.` : `Current runway ~${runwayMonths !== null ? runwayMonths.toFixed(1) + ' mo' : '∞'} — tight if revenue growth slows.`,
+                  mitigation: ar ? 'إعطاء الأولوية للقنوات ذات متوسط قيمة طلب مرتفع (البازارات)؛ تأجيل النفقات الرأسمالية غير الضرورية.' : 'Prioritize high-AOV channels (bazaars); defer non-essential CAPEX.',
                   color: '#E65100'
                 },
                 {
-                  risk: 'Production Capacity',
-                  impact: 'Medium',
-                  detail: 'Manual production may bottleneck if bazaar orders scale rapidly.',
-                  mitigation: 'Map max weekly output now; identify 1 part-time production hire threshold.',
+                  risk:       ar ? 'طاقة الإنتاج'                 : 'Production Capacity',
+                  impact:     ar ? 'متوسط'                         : 'Medium',
+                  detail:     ar ? 'الإنتاج اليدوي قد يصبح عائقاً إذا توسعت طلبات البازار بسرعة.' : 'Manual production may bottleneck if bazaar orders scale rapidly.',
+                  mitigation: ar ? 'تحديد الحد الأقصى للإنتاج الأسبوعي الآن؛ تحديد نقطة توظيف عامل إنتاج جزئي.' : 'Map max weekly output now; identify 1 part-time production hire threshold.',
                   color: '#C4922A'
                 },
               ].map((r, i) => (
-                <div key={i} className="border-l-4 pl-3 py-1" style={{ borderColor: r.color }}>
+                <div key={i} className={ar ? 'border-r-4 pr-3 py-1' : 'border-l-4 pl-3 py-1'} style={{ borderColor: r.color }}>
                   <div className="flex items-center gap-2 mb-1">
                     <p className="text-sm font-semibold text-[#3B2000]">{r.risk}</p>
                     <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ background: r.color + '22', color: r.color }}>{r.impact}</span>
@@ -516,10 +573,10 @@ export default function BoardPage() {
         </div>
 
         {/* ── Revenue Trend Chart ── */}
-        <SectionLabel>Revenue &amp; Profitability Trend</SectionLabel>
+        <SectionLabel>{ar ? 'اتجاه الإيرادات والربحية' : 'Revenue & Profitability Trend'}</SectionLabel>
         <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] p-5">
           {monthly.length < 2 ? (
-            <p className="text-center text-gray-400 py-8">Not enough data yet</p>
+            <p className="text-center text-gray-400 py-8">{ar ? 'لا توجد بيانات كافية بعد' : 'Not enough data yet'}</p>
           ) : (
             <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
               <defs>
@@ -578,27 +635,27 @@ export default function BoardPage() {
                 return <text key={i} x={x} y={H-PAD.b+14} textAnchor="middle" fontSize="9" fill="#9E9E9E">{m.label}</text>
               })}
 
-              {/* Legend */}
-              <circle cx={PAD.l} cy={12} r={4} fill="#7C4A00"/>
-              <text x={PAD.l+8} y={16} fontSize="9" fill="#555">Revenue</text>
-              <line x1={PAD.l+70} y1={12} x2={PAD.l+82} y2={12} stroke="#4CAF7D" strokeWidth="2" strokeDasharray="4,2"/>
-              <text x={PAD.l+86} y={16} fontSize="9" fill="#555">Net</text>
+              {/* Legend — bottom of chart */}
+              <circle cx={PAD.l} cy={H-6} r={4} fill="#7C4A00"/>
+              <text x={PAD.l+8} y={H-2} fontSize="10" fontWeight="600" fill="#7C4A00">{ar ? 'الإيرادات' : 'Revenue'}</text>
+              <line x1={PAD.l+76} y1={H-6} x2={PAD.l+90} y2={H-6} stroke="#4CAF7D" strokeWidth="2.5" strokeDasharray="5,3"/>
+              <text x={PAD.l+94} y={H-2} fontSize="10" fontWeight="600" fill="#4CAF7D">{ar ? 'الصافي' : 'Net'}</text>
             </svg>
           )}
         </div>
 
         {/* ── Monthly Table ── */}
-        <SectionLabel>Monthly Breakdown</SectionLabel>
+        <SectionLabel>{ar ? 'التفصيل الشهري' : 'Monthly Breakdown'}</SectionLabel>
         <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-[#F5EFE6] text-[#5C3D11]">
-                <th className="px-4 py-3 text-left font-semibold">Month</th>
-                <th className="px-4 py-3 text-right font-semibold">Revenue</th>
-                <th className="px-4 py-3 text-right font-semibold">Expenses</th>
-                <th className="px-4 py-3 text-right font-semibold">Net</th>
-                <th className="px-4 py-3 text-right font-semibold">Margin</th>
-                <th className="px-4 py-3 text-right font-semibold">Units</th>
+                <th className={`px-4 py-3 font-semibold ${ar ? 'text-right' : 'text-left'}`}>{ar ? 'الشهر' : 'Month'}</th>
+                <th className="px-4 py-3 text-right font-semibold">{ar ? 'الإيرادات' : 'Revenue'}</th>
+                <th className="px-4 py-3 text-right font-semibold">{ar ? 'المصروفات' : 'Expenses'}</th>
+                <th className="px-4 py-3 text-right font-semibold">{ar ? 'الصافي' : 'Net'}</th>
+                <th className="px-4 py-3 text-right font-semibold">{ar ? 'الهامش' : 'Margin'}</th>
+                <th className="px-4 py-3 text-right font-semibold">{ar ? 'الوحدات' : 'Units'}</th>
               </tr>
             </thead>
             <tbody>
@@ -606,7 +663,7 @@ export default function BoardPage() {
                 <tr key={m.month} className={i % 2 === 0 ? 'bg-white' : 'bg-[#FAFAF7]'}>
                   <td className="px-4 py-2.5 font-medium text-[#3B2000]">
                     {m.label}
-                    {m.month === thisMonth && <span className="ml-2 text-xs bg-[#E8B84B] text-[#3B2000] px-1.5 py-0.5 rounded-full font-bold">MTD</span>}
+                    {m.month === thisMonth && <span className={`${ar ? 'mr-2' : 'ml-2'} text-xs bg-[#E8B84B] text-[#3B2000] px-1.5 py-0.5 rounded-full font-bold`}>{ar ? 'حتى الآن' : 'MTD'}</span>}
                   </td>
                   <td className="px-4 py-2.5 text-right font-semibold text-[#7C4A00]">{fmtEGP(m.revenue)}</td>
                   <td className="px-4 py-2.5 text-right text-gray-600">{fmtEGP(m.expenses)}</td>
@@ -620,17 +677,17 @@ export default function BoardPage() {
         </div>
 
         {/* ── Channel Unit Economics ── */}
-        <SectionLabel>Channel Unit Economics</SectionLabel>
+        <SectionLabel>{ar ? 'اقتصاديات قنوات البيع' : 'Channel Unit Economics'}</SectionLabel>
         <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-[#F5EFE6] text-[#5C3D11]">
-                <th className="px-4 py-3 text-left font-semibold">Channel</th>
-                <th className="px-4 py-3 text-right font-semibold">Total Revenue</th>
-                <th className="px-4 py-3 text-right font-semibold">Transactions</th>
-                <th className="px-4 py-3 text-right font-semibold">AOV</th>
-                <th className="px-4 py-3 text-right font-semibold">Avg Units/Order</th>
-                <th className="px-4 py-3 text-right font-semibold">Revenue Share</th>
+                <th className={`px-4 py-3 font-semibold ${ar ? 'text-right' : 'text-left'}`}>{ar ? 'القناة' : 'Channel'}</th>
+                <th className="px-4 py-3 text-right font-semibold">{ar ? 'إجمالي الإيرادات' : 'Total Revenue'}</th>
+                <th className="px-4 py-3 text-right font-semibold">{ar ? 'المعاملات' : 'Transactions'}</th>
+                <th className="px-4 py-3 text-right font-semibold">{ar ? 'متوسط قيمة الطلب' : 'AOV'}</th>
+                <th className="px-4 py-3 text-right font-semibold">{ar ? 'وحدات/طلب' : 'Avg Units/Order'}</th>
+                <th className="px-4 py-3 text-right font-semibold">{ar ? 'الحصة' : 'Revenue Share'}</th>
               </tr>
             </thead>
             <tbody>
@@ -661,17 +718,17 @@ export default function BoardPage() {
         </div>
 
         {/* ── Donuts Row ── */}
-        <SectionLabel>Mix Analysis</SectionLabel>
+        <SectionLabel>{ar ? 'تحليل التوزيع' : 'Mix Analysis'}</SectionLabel>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
           {/* Channel Mix */}
           <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] p-5">
-            <h3 className="font-semibold text-[#3B2000] mb-4 text-sm uppercase tracking-wide">Revenue by Channel</h3>
+            <h3 className="font-semibold text-[#3B2000] mb-4 text-sm uppercase tracking-wide">{ar ? 'الإيرادات حسب القناة' : 'Revenue by Channel'}</h3>
             <div className="flex items-center gap-4">
               <svg viewBox="0 0 160 160" className="w-32 h-32 flex-shrink-0">
                 {chArcs.map((a,i) => <path key={i} d={a.path} fill={a.color}/>)}
                 <text x="80" y="76" textAnchor="middle" fontSize="11" fill="#3B2000" fontWeight="700">{channelEntries.length}</text>
-                <text x="80" y="90" textAnchor="middle" fontSize="8" fill="#9E9E9E">channels</text>
+                <text x="80" y="90" textAnchor="middle" fontSize="8" fill="#9E9E9E">{ar ? 'قنوات' : 'channels'}</text>
               </svg>
               <div className="flex-1 space-y-2">
                 {channelEntries.map(([ch, v], i) => (
@@ -687,12 +744,12 @@ export default function BoardPage() {
 
           {/* Expense Mix */}
           <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] p-5">
-            <h3 className="font-semibold text-[#3B2000] mb-4 text-sm uppercase tracking-wide">Expense Breakdown</h3>
+            <h3 className="font-semibold text-[#3B2000] mb-4 text-sm uppercase tracking-wide">{ar ? 'توزيع المصروفات' : 'Expense Breakdown'}</h3>
             <div className="flex items-center gap-4">
               <svg viewBox="0 0 160 160" className="w-32 h-32 flex-shrink-0">
                 {expArcs.map((a,i) => <path key={i} d={a.path} fill={a.color}/>)}
                 <text x="80" y="76" textAnchor="middle" fontSize="10" fill="#3B2000" fontWeight="700">{fmtEGP(totalExpenses).replace('EGP ','')}</text>
-                <text x="80" y="90" textAnchor="middle" fontSize="7.5" fill="#9E9E9E">total</text>
+                <text x="80" y="90" textAnchor="middle" fontSize="7.5" fill="#9E9E9E">{ar ? 'إجمالي' : 'total'}</text>
               </svg>
               <div className="flex-1 space-y-2 max-h-36 overflow-y-auto">
                 {expEntries.map(([cat, v], i) => (
@@ -708,7 +765,7 @@ export default function BoardPage() {
         </div>
 
         {/* ── Product Mix ── */}
-        <SectionLabel>Product Mix (All Time Units)</SectionLabel>
+        <SectionLabel>{ar ? 'مزيج المنتجات (إجمالي الوحدات)' : 'Product Mix (All Time Units)'}</SectionLabel>
         <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] p-5">
           <div className="space-y-3">
             {Object.entries(productUnits)
@@ -719,7 +776,7 @@ export default function BoardPage() {
                   <div key={name}>
                     <div className="flex justify-between text-xs mb-1">
                       <span className="font-medium text-[#3B2000]">{name}</span>
-                      <span className="text-gray-500">{units} units · {share.toFixed(1)}%</span>
+                      <span className="text-gray-500">{units} {ar ? 'وحدة' : 'units'} · {share.toFixed(1)}%</span>
                     </div>
                     <div className="h-2 bg-[#F0E8DC] rounded-full overflow-hidden">
                       <div
@@ -735,10 +792,12 @@ export default function BoardPage() {
 
         {/* ── Footer ── */}
         <footer className="text-center py-4 text-xs text-gray-400">
-          JUMAR Board Dashboard · Data from live database · {new Date().toLocaleDateString('en-EG', { year:'numeric', month:'long', day:'numeric' })}
+          {ar ? 'لوحة مجلس الإدارة · جُمار · بيانات مباشرة من قاعدة البيانات · ' : 'JUMAR Board Dashboard · Data from live database · '}
+          {new Date().toLocaleDateString(ar ? 'ar-EG' : 'en-EG', { year:'numeric', month:'long', day:'numeric' })}
         </footer>
       </main>
     </div>
+    </>
   )
 }
 
