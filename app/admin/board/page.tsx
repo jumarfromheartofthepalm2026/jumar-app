@@ -63,7 +63,6 @@ export default function BoardPage() {
   const totalRevenue  = sales.reduce((s,r) => s + r.amount, 0)
   const totalExpenses = expenses.reduce((s,r) => s + r.amount, 0)
   const netPosition   = totalRevenue - totalExpenses
-  const grossMargin   = totalRevenue > 0 ? ((totalRevenue - totalExpenses) / totalRevenue) * 100 : 0
 
   // This month vs last month
   const mRev  = (k: string) => sales.filter(r => monthKey(r.sale_date) === k).reduce((s,r) => s+r.amount, 0)
@@ -71,6 +70,7 @@ export default function BoardPage() {
   const thisRevenue  = mRev(thisMonth)
   const lastRevenue  = mRev(lastMonth)
   const thisExpenses = mExp(thisMonth)
+  const lastExpenses = mExp(lastMonth)
   const revenueGrowth = lastRevenue > 0 ? ((thisRevenue - lastRevenue) / lastRevenue) * 100 : 0
 
   // Units sold this month
@@ -93,7 +93,6 @@ export default function BoardPage() {
   // Customer type mix
   const ctMap: Record<string, number> = {}
   sales.forEach(r => { const ct = r.customer_type || 'غير محدد'; ctMap[ct] = (ctMap[ct]||0) + r.amount })
-  const ctEntries = Object.entries(ctMap).sort((a,b) => b[1]-a[1])
 
   // Expense breakdown (all time)
   const expMap: Record<string, number> = {}
@@ -124,6 +123,60 @@ export default function BoardPage() {
     'Hazelnut Snickers': sales.reduce((s,r) => s+(r.qty_snickers_bunduq||0), 0),
   }
   const totalUnits = Object.values(productUnits).reduce((s,v) => s+v, 0)
+
+  // ── Forward-Looking Metrics ─────────────────────────────────────────────
+  // Average monthly burn (last 3 months of expense data)
+  const last3Months = allMonths.slice(-3)
+  const avgMonthlyBurn = last3Months.length > 0
+    ? last3Months.reduce((s, k) => s + mExp(k), 0) / last3Months.length
+    : thisExpenses || 1
+
+  // Avg monthly revenue (last 3 months)
+  const avgMonthlyRevenue = last3Months.length > 0
+    ? last3Months.reduce((s, k) => s + mRev(k), 0) / last3Months.length
+    : thisRevenue
+
+  // Cash runway: how many months can we sustain at current burn assuming net inflows
+  // Net cash burn = avg expenses - avg revenue (if negative = cash positive, if positive = burning cash)
+  const netMonthlyCashBurn = avgMonthlyBurn - avgMonthlyRevenue
+  const runwayMonths = netMonthlyCashBurn > 0
+    ? Math.max(0, Math.abs(netPosition) / netMonthlyCashBurn)
+    : null // cash positive, infinite runway
+
+  // Break-even: at current growth rate, when will monthly revenue = monthly expenses?
+  // Monthly revenue growth rate (last 2 months)
+  const revenueGrowthRate = lastRevenue > 0 ? (thisRevenue - lastRevenue) / lastRevenue : 0
+  const breakEvenMonths = (() => {
+    if (thisRevenue >= thisExpenses) return 0 // already at or above break-even this month
+    if (revenueGrowthRate <= 0) return null   // not growing, can't project
+    let rev = thisRevenue
+    let months = 0
+    while (rev < avgMonthlyBurn && months < 24) {
+      rev = rev * (1 + revenueGrowthRate)
+      months++
+    }
+    return months
+  })()
+
+  // Channel unit economics: AOV per channel
+  const channelEcon: Record<string, { revenue: number; txns: number; units: number }> = {}
+  sales.forEach(r => {
+    const ch = r.channel || 'Other'
+    if (!channelEcon[ch]) channelEcon[ch] = { revenue: 0, txns: 0, units: 0 }
+    channelEcon[ch].revenue += r.amount
+    channelEcon[ch].txns += 1
+    channelEcon[ch].units += (r.qty_tamriya||0)+(r.qty_fudge||0)+(r.qty_sultana||0)+(r.qty_snickers_fool||0)+(r.qty_snickers_bunduq||0)
+  })
+  const channelEconEntries = Object.entries(channelEcon)
+    .map(([ch, d]) => ({ ch, aov: d.txns > 0 ? d.revenue / d.txns : 0, upv: d.txns > 0 ? d.units / d.txns : 0, revenue: d.revenue, txns: d.txns }))
+    .sort((a, b) => b.aov - a.aov)
+
+  // Inventory turnover proxy: total units sold / months active
+  const monthsActive = allMonths.length || 1
+  const avgUnitsPerMonth = totalUnits / monthsActive
+
+  // MoM expense change
+  const expenseChange = lastExpenses > 0 ? ((thisExpenses - lastExpenses) / lastExpenses) * 100 : 0
 
   // Revenue chart
   const maxRev = Math.max(...monthly.map(m => m.revenue), 1)
@@ -218,14 +271,90 @@ export default function BoardPage() {
           <KPICard
             label="Total Expenses"
             value={fmtEGP(totalExpenses)}
-            sub={`This month: ${fmtEGP(thisExpenses)}`}
+            sub={`MoM: ${expenseChange >= 0 ? '+' : ''}${expenseChange.toFixed(1)}%`}
+            trend={-expenseChange}
             icon="🧾"
             accent="#607D8B"
           />
         </div>
 
+        {/* ── Forward-Looking: Runway + Break-even ── */}
+        <SectionLabel>Financial Outlook</SectionLabel>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+          {/* Cash Runway */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] p-5 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🏦</span>
+              <h3 className="font-semibold text-[#3B2000] text-sm uppercase tracking-wide">Cash Runway</h3>
+            </div>
+            {runwayMonths === null ? (
+              <>
+                <p className="text-3xl font-black text-green-700">∞</p>
+                <p className="text-xs text-gray-500">Revenue exceeds expenses — self-sustaining</p>
+              </>
+            ) : (
+              <>
+                <p className="text-3xl font-black" style={{ color: runwayMonths < 3 ? '#C62828' : runwayMonths < 6 ? '#E65100' : '#2E7D32' }}>
+                  {runwayMonths < 1 ? '&lt;1' : runwayMonths.toFixed(1)} mo
+                </p>
+                <div className="w-full bg-[#F0E8DC] rounded-full h-2">
+                  <div
+                    className="h-2 rounded-full transition-all"
+                    style={{
+                      width: `${Math.min(100, (runwayMonths / 12) * 100)}%`,
+                      background: runwayMonths < 3 ? '#C62828' : runwayMonths < 6 ? '#E65100' : '#4CAF7D'
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500">Based on avg monthly burn of {fmtEGP(avgMonthlyBurn)} vs avg revenue {fmtEGP(avgMonthlyRevenue)}</p>
+              </>
+            )}
+          </div>
+
+          {/* Break-even */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] p-5 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🎯</span>
+              <h3 className="font-semibold text-[#3B2000] text-sm uppercase tracking-wide">Break-even</h3>
+            </div>
+            {breakEvenMonths === 0 ? (
+              <>
+                <p className="text-3xl font-black text-green-700">Now ✓</p>
+                <p className="text-xs text-gray-500">This month&apos;s revenue covers operating expenses</p>
+              </>
+            ) : breakEvenMonths === null ? (
+              <>
+                <p className="text-3xl font-black text-gray-400">—</p>
+                <p className="text-xs text-gray-500">Insufficient growth data to project</p>
+              </>
+            ) : (
+              <>
+                <p className="text-3xl font-black text-[#7C4A00]">~{breakEvenMonths} mo</p>
+                <p className="text-xs text-gray-500">
+                  At {(revenueGrowthRate * 100).toFixed(1)}% MoM growth, monthly revenue will cover avg expenses of {fmtEGP(avgMonthlyBurn)}
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* Avg Velocity */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] p-5 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">⚡</span>
+              <h3 className="font-semibold text-[#3B2000] text-sm uppercase tracking-wide">Sales Velocity</h3>
+            </div>
+            <p className="text-3xl font-black text-[#C4922A]">{Math.round(avgUnitsPerMonth)}</p>
+            <p className="text-xs text-gray-500">Avg units/month over {monthsActive} month{monthsActive !== 1 ? 's' : ''}</p>
+            <div className="pt-1 border-t border-[#F0E8DC]">
+              <p className="text-xs text-gray-400">Avg revenue/month</p>
+              <p className="text-sm font-bold text-[#7C4A00]">{fmtEGP(avgMonthlyRevenue)}</p>
+            </div>
+          </div>
+        </div>
+
         {/* ── Revenue Trend Chart ── */}
-        <SectionLabel>Revenue & Profitability Trend</SectionLabel>
+        <SectionLabel>Revenue &amp; Profitability Trend</SectionLabel>
         <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] p-5">
           {monthly.length < 2 ? (
             <p className="text-center text-gray-400 py-8">Not enough data yet</p>
@@ -322,6 +451,47 @@ export default function BoardPage() {
                   <td className={`px-4 py-2.5 text-right font-semibold ${m.net >= 0 ? 'text-green-700' : 'text-red-600'}`}>{fmtEGP(m.net)}</td>
                   <td className="px-4 py-2.5 text-right text-gray-500">{pct(m.net, m.revenue)}</td>
                   <td className="px-4 py-2.5 text-right text-gray-500">{m.units > 0 ? m.units : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* ── Channel Unit Economics ── */}
+        <SectionLabel>Channel Unit Economics</SectionLabel>
+        <div className="bg-white rounded-2xl shadow-sm border border-[#E8D8C4] overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-[#F5EFE6] text-[#5C3D11]">
+                <th className="px-4 py-3 text-left font-semibold">Channel</th>
+                <th className="px-4 py-3 text-right font-semibold">Total Revenue</th>
+                <th className="px-4 py-3 text-right font-semibold">Transactions</th>
+                <th className="px-4 py-3 text-right font-semibold">AOV</th>
+                <th className="px-4 py-3 text-right font-semibold">Avg Units/Order</th>
+                <th className="px-4 py-3 text-right font-semibold">Revenue Share</th>
+              </tr>
+            </thead>
+            <tbody>
+              {channelEconEntries.map((row, i) => (
+                <tr key={row.ch} className={i % 2 === 0 ? 'bg-white' : 'bg-[#FAFAF7]'}>
+                  <td className="px-4 py-2.5 font-medium text-[#3B2000]">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: chArcs[i]?.color || '#ccc' }}/>
+                      {row.ch}
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-semibold text-[#7C4A00]">{fmtEGP(row.revenue)}</td>
+                  <td className="px-4 py-2.5 text-right text-gray-600">{row.txns}</td>
+                  <td className="px-4 py-2.5 text-right font-semibold text-[#3B2000]">{fmtEGP(row.aov)}</td>
+                  <td className="px-4 py-2.5 text-right text-gray-500">{row.upv.toFixed(1)}</td>
+                  <td className="px-4 py-2.5 text-right">
+                    <div className="flex items-center gap-2 justify-end">
+                      <div className="w-16 bg-[#F0E8DC] rounded-full h-1.5">
+                        <div className="h-1.5 rounded-full" style={{ width: `${(row.revenue/totalRevenue)*100}%`, background: chArcs[i]?.color || '#ccc' }}/>
+                      </div>
+                      <span className="text-xs text-gray-500 w-10 text-right">{pct(row.revenue, totalRevenue)}</span>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
