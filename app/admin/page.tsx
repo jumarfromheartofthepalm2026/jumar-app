@@ -22,7 +22,7 @@ type Expense = { id: string; expense_date: string; category: string; description
 type DaySummary = { date: string; total: number; count: number; soldQty: number; giftQty: number }
 
 // ── Constants ───────────────────────────────────────────────────────────────
-const EXPENSE_CATEGORIES = ['خامات','معدات','تغليف','تسويق','رسوم بازار','عمالة','نثريات','بحث وتطوير','أخرى']
+const EXPENSE_CATEGORIES = ['خامات','معدات','تغليف','تسويق','رسوم بازار','عمالة','نثريات','بحث وتطوير','تسوية COGS','أخرى']
 const FIXED_EXPENSE_CATEGORIES = ['عمالة','إيجار','معدات'] // مصاريف ثابتة
 const CHANNELS = ['بازار','مباشر','إنستجرام','أونلاين']
 const PACKAGING_COST_PER_PIECE = 1.5 // جنيه/قطعة تكلفة تغليف
@@ -1593,7 +1593,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
           mExpenses.forEach(e => { mExpByCategory[e.category] = (mExpByCategory[e.category] || 0) + Number(e.amount) })
 
           const mCOGSIngredients = mQtySold > 0 ? mQtySold * mAvgCOG : (mRevenue * 0.54)
-          const mCOGSAdjustment = mExpByCategory['خامات'] || 0  // تسويات COGS مسجلة في expenses
+          const mCOGSAdjustment = mExpByCategory['تسوية COGS'] || 0
           const mCOGS = mCOGSIngredients + mCOGSAdjustment
           const mGrossProfit = mRevenue - mCOGS
           const mGrossMargin = mRevenue > 0 ? (mGrossProfit / mRevenue) * 100 : 0
@@ -1710,7 +1710,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                     <div className="flex justify-between"><span className="font-bold text-sm text-gray-700">= {ar ? 'إجمالي الربح' : 'Gross Profit'}</span><span className="font-bold text-green-600">{fmt(mGrossProfit)} {cur}</span></div>
                     <p className="text-xs text-jumar-gold mt-0.5">{ar ? 'هامش إجمالي' : 'Gross margin'}: {mGrossMargin.toFixed(1)}% {mGrossMargin >= 40 ? '✅' : mGrossMargin >= 30 ? '⚠️' : '❌'}</p>
                   </div>
-                  {Object.entries(mExpByCategory).filter(([cat,v]) => v > 0 && cat !== 'خامات').sort(([,a],[,b]) => b-a).map(([cat, v]) => (
+                  {Object.entries(mExpByCategory).filter(([,v]) => v > 0).sort(([,a],[,b]) => b-a).map(([cat, v]) => (
                     <Row key={cat} label={`(-) ${cat}`} value={`−${fmt(v)} ${cur}`} color="text-red-400" indent />
                   ))}
                   {mGiftQty > 0 && <Row label={`(-) ${ar ? `هدايا (${mGiftQty} قطعة)` : `Gifts (${mGiftQty} pcs)`}`} value={`−${fmt(mGiftQty * (mAvgCOG + PACKAGING_COST_PER_PIECE))} ${cur}`} color="text-orange-400" indent />}
