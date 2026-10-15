@@ -44,6 +44,7 @@ const BOX_SIZES = [
   { label: 'علبة ١٥', pieces: 15 },
   { label: 'علبة ٢٤', pieces: 24 },
 ]
+const BOX_PRICE_MAP: Record<number, number> = { 2: 70, 5: 170, 8: 260, 15: 450, 24: 650 }
 
 const DEFAULT_INGREDIENTS = [
   { name: 'تمر مجدول', min_stock: 500, cost_per_gram: 0.20 },
