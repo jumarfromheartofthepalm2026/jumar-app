@@ -44,6 +44,16 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
   cancelled: '❌ ملغي',
 }
 
+export const STATUS_LABELS_EN: Record<OrderStatus, string> = {
+  pending: '⏳ Pending',
+  new: '🆕 New',
+  preparing: '👩‍🍳 Preparing',
+  ready: '✅ Ready',
+  shipped: '🚚 Shipped',
+  delivered: '🎉 Delivered',
+  cancelled: '❌ Cancelled',
+}
+
 export const STATUS_COLORS: Record<OrderStatus, string> = {
   pending: 'bg-orange-100 text-orange-800',
   new: 'bg-blue-100 text-blue-800',
