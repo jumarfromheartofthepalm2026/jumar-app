@@ -85,6 +85,59 @@ const STATUS_WA_MSGS: Record<OrderStatus, string> = {
   cancelled: 'تم إلغاء طلبك — جُمار 🌿 لأي استفسار تواصل معنا.',
 }
 
+// ── Translation maps ────────────────────────────────────────────────────────
+const PRODUCT_EN: Record<string, string> = {
+  'تمرية الطحينة': 'Tahini Date Ball',
+  'سلطانة الفستق': 'Pistachio Queen',
+  'فدج الكاجو':    'Cashew Fudge',
+  'سنيكرز الفول':  'Peanut Snickers',
+  'سنيكرز البندق': 'Hazelnut Snickers',
+}
+const CATEGORY_EN: Record<string, string> = {
+  'خامات':       'Raw Materials',
+  'معدات':       'Equipment',
+  'تغليف':       'Packaging',
+  'تسويق':       'Marketing',
+  'رسوم بازار':  'Bazaar Fees',
+  'عمالة':       'Labor',
+  'نثريات':      'Miscellaneous',
+  'بحث وتطوير':  'R&D',
+  'تسوية COGS':  'COGS Adjustment',
+  'أخرى':        'Other',
+}
+const CHANNEL_EN: Record<string, string> = {
+  'بازار':     'Bazaar',
+  'مباشر':     'Direct',
+  'إنستجرام':  'Instagram',
+  'أونلاين':   'Online',
+}
+const INGREDIENT_EN: Record<string, string> = {
+  'تمر مجدول':      'Medjool Dates',
+  'تمر عادي':       'Regular Dates',
+  'كاجو':           'Cashews',
+  'فستق':           'Pistachios',
+  'بندق':           'Hazelnuts',
+  'فول سوداني':     'Peanuts',
+  'طحينة':          'Tahini',
+  'شوكولاتة دارك':  'Dark Chocolate',
+  'زبدة':           'Butter',
+  'تين مجفف':       'Dried Figs',
+  'سمسم':           'Sesame',
+  'جوز هند':        'Coconut',
+  'زبيب':           'Raisins',
+  'كاكاو خام':      'Raw Cacao',
+  'زيت جوز الهند':  'Coconut Oil',
+}
+const CUSTOMER_TYPE_EN: Record<string, string> = {
+  'غريب':     'New',
+  'عارف':     'Returning',
+  'متحمس':    'Loyal',
+}
+
+function t(ar: boolean, arText: string, enMap: Record<string, string>): string {
+  return ar ? arText : (enMap[arText] || arText)
+}
+
 // ── Language type ───────────────────────────────────────────────────────────
 type Lang = 'ar' | 'en'
 
@@ -733,9 +786,112 @@ function InventoryTab({ lang }: { lang: Lang }) {
 // ══════════════════════════════════════════════════════════════════════════════
 type Bazaar = { id: string; name: string; location: string; start_date: string; end_date: string; fixed_cost: number; qty_sold: number; revenue_actual: number; notes: string }
 
+function BoxMarginsPanel({ ar, cur, avgCogPerPiece, cogPerPiece, boxSalesCount, totalRevenue, fmt }: {
+  ar: boolean; cur: string; avgCogPerPiece: number; cogPerPiece: (p: string) => number
+  boxSalesCount: Record<number, number>; totalRevenue: number; fmt: (n: number) => string
+}) {
+  const [viewMode, setViewMode] = useState<'avg'|'max'>('avg')
+
+  const maxCogPerPiece = Math.max(...Object.keys(RECIPES).map(p => cogPerPiece(p)))
+  const maxCogProduct = Object.keys(RECIPES).find(p => cogPerPiece(p) === maxCogPerPiece) || ''
+  const maxCostPerPiece = maxCogPerPiece + PACKAGING_COST_PER_PIECE
+  const costPerPieceUsed = viewMode === 'avg' ? (avgCogPerPiece + PACKAGING_COST_PER_PIECE) : maxCostPerPiece
+
+  const boxData = BOX_SIZES.map(({ label, pieces }) => {
+    const price = BOX_PRICE_MAP[pieces] || 0
+    const totalCost = costPerPieceUsed * pieces
+    const profit = price - totalCost
+    const margin = price > 0 ? (profit / price) * 100 : 0
+    const salesCount = boxSalesCount[pieces] || 0
+    const totalRevForBox = salesCount * price
+    const shareOfTotal = totalRevenue > 0 ? (totalRevForBox / totalRevenue) * 100 : 0
+    return { label, pieces, price, totalCost, profit, margin, salesCount, totalRevForBox, shareOfTotal }
+  }).sort((a, b) => b.margin - a.margin)
+
+  const bestBox = boxData[0]
+  const mostSold = [...boxData].sort((a, b) => b.salesCount - a.salesCount)[0]
+  const totalBoxSales = Object.values(boxSalesCount).reduce((s, n) => s + n, 0)
+
+  return (
+    <div className="space-y-4">
+      {/* سويتش متوسط / أغلى قطعة */}
+      <div className="bg-white rounded-2xl shadow-sm p-1 flex gap-1">
+        <button
+          onClick={() => setViewMode('avg')}
+          className={`flex-1 py-2 px-3 rounded-xl text-sm font-bold transition-all ${viewMode === 'avg' ? 'bg-jumar-brown text-white' : 'text-gray-400'}`}
+        >{ar ? '📊 متوسط القطع' : '📊 Avg Piece'}</button>
+        <button
+          onClick={() => setViewMode('max')}
+          className={`flex-1 py-2 px-3 rounded-xl text-sm font-bold transition-all ${viewMode === 'max' ? 'bg-jumar-brown text-white' : 'text-gray-400'}`}
+        >{ar ? '💎 أغلى قطعة' : '💎 Costliest Piece'}</button>
+      </div>
+
+      {/* معلومة التكلفة المستخدمة */}
+      <div className={`rounded-xl p-3 text-xs ${viewMode === 'avg' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
+        {viewMode === 'avg'
+          ? `📊 ${ar ? 'تكلفة متوسط كل القطع' : 'Average across all products'}: ${(avgCogPerPiece + PACKAGING_COST_PER_PIECE).toFixed(2)} ${cur} / ${ar ? 'قطعة' : 'pc'}`
+          : `💎 ${ar ? `أغلى قطعة: ${maxCogProduct}` : `Costliest: ${maxCogProduct}`} — ${maxCostPerPiece.toFixed(2)} ${cur} / ${ar ? 'قطعة' : 'pc'} ${ar ? '(الهامش الأدنى المضمون)' : '(worst-case margin)'}`
+        }
+      </div>
+
+      {/* ملخص */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
+          <p className="text-xs text-green-600 mb-1">{ar ? 'أعلى هامش ربح' : 'Best Margin'}</p>
+          <p className="text-xl font-bold text-green-700">{bestBox.label}</p>
+          <p className="text-sm text-green-600">{bestBox.margin.toFixed(1)}%</p>
+        </div>
+        {mostSold.salesCount > 0 && (
+          <div className="bg-jumar-brown text-white rounded-2xl p-4 text-center">
+            <p className="text-xs text-white/60 mb-1">{ar ? 'الأكثر مبيعاً' : 'Best Seller'}</p>
+            <p className="text-xl font-bold text-jumar-gold">{mostSold.label}</p>
+            <p className="text-sm text-white/80">{mostSold.salesCount} {ar ? 'بيعة' : 'sales'}</p>
+          </div>
+        )}
+      </div>
+
+      {/* جدول العلب */}
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-100">
+          <p className="font-bold text-jumar-brown">{ar ? 'تفاصيل كل حجم علبة' : 'Box Size Breakdown'}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{ar ? `تكلفة القطعة: ${costPerPieceUsed.toFixed(2)} ج` : `Cost/pc: ${costPerPieceUsed.toFixed(2)} ${cur}`}</p>
+        </div>
+        <div className="divide-y divide-gray-50">
+          {boxData.map(box => (
+            <div key={box.pieces} className="p-4">
+              <div className="flex justify-between items-center mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-gray-800">{box.label}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${box.margin >= 50 ? 'bg-green-100 text-green-700' : box.margin >= 40 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'}`}>{box.margin.toFixed(1)}%</span>
+                </div>
+                <span className="font-bold text-jumar-brown">{fmt(box.price)} {cur}</span>
+              </div>
+              <div className="w-full bg-gray-100 rounded-full h-2 mb-2 overflow-hidden">
+                <div className={`h-2 rounded-full ${box.margin >= 50 ? 'bg-green-500' : box.margin >= 40 ? 'bg-amber-400' : 'bg-red-400'}`} style={{ width: `${Math.min(100, Math.max(0, box.margin))}%` }} />
+              </div>
+              <div className="grid grid-cols-4 gap-1 text-center text-xs text-gray-500">
+                <div><p className="text-gray-400">{ar ? 'تكلفة' : 'Cost'}</p><p className="font-bold text-red-500">{box.totalCost.toFixed(0)}{cur}</p></div>
+                <div><p className="text-gray-400">{ar ? 'ربح' : 'Profit'}</p><p className="font-bold text-green-600">{box.profit.toFixed(0)}{cur}</p></div>
+                <div><p className="text-gray-400">{ar ? 'مبيع' : 'Sold'}</p><p className="font-bold text-jumar-brown">{box.salesCount > 0 ? box.salesCount : '—'}</p></div>
+                <div><p className="text-gray-400">{ar ? 'من الإيراد' : 'Share'}</p><p className="font-bold">{box.salesCount > 0 ? `${box.shareOfTotal.toFixed(1)}%` : '—'}</p></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {totalBoxSales === 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+          💡 {ar ? 'الأرقام في عمود "مبيع" بتيجي من items_desc في المبيعات. لو مكتوبة بشكل مختلف هتظهر صفر.' : 'Sales counts come from items_desc field. If descriptions differ, counts show zero.'}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function FinanceTab({ lang }: { lang: Lang }) {
   const ar = lang === 'ar'
-  const [tab, setTab] = useState<'overview'|'pl'|'cogs'|'inventory_turn'|'channels'|'customers'|'bazaar_roi'|'past_bazaars'|'cashflow'|'monthly_report'|'ltv'|'box_margins'|'stock_alert'|'sales'|'expenses'>('overview')
+  const [tab, setTab] = useState<'overview'|'pl'|'charts'|'comparison'|'cogs'|'inventory_turn'|'channels'|'customers'|'bazaar_roi'|'past_bazaars'|'cashflow'|'monthly_report'|'ltv'|'box_margins'|'stock_alert'|'sales'|'expenses'>('overview')
   const [reportMonth, setReportMonth] = useState(() => new Date().toISOString().substring(0, 7))
   const [kpis, setKpis] = useState<KPIs | null>(null)
   const [monthlyData, setMonthlyData] = useState<MonthRow[]>([])
@@ -981,6 +1137,8 @@ function FinanceTab({ lang }: { lang: Lang }) {
   const TABS = [
     ['overview', ar ? '📊 نظرة سريعة' : '📊 Overview'],
     ['pl',       ar ? '📋 P&L'        : '📋 P&L'],
+    ['charts',   ar ? '📈 رسوم بيانية' : '📈 Charts'],
+    ['comparison', ar ? '🗓️ مقارنة شهرية' : '🗓️ Monthly Comparison'],
     ['cogs',     ar ? '🏭 تكلفة إنتاج' : '🏭 COGS'],
     ['inventory_turn', ar ? '🔄 دوران مخزون' : '🔄 Inventory'],
     ['channels', ar ? '📡 القنوات'    : '📡 Channels'],
@@ -1136,6 +1294,252 @@ function FinanceTab({ lang }: { lang: Lang }) {
           </>
         )}
 
+        {/* ── Charts ── */}
+        {tab === 'charts' && (() => {
+          const sorted = [...monthlyData].sort((a, b) => a.month.localeCompare(b.month))
+          if (sorted.length === 0) return (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center text-amber-700 text-sm">
+              {ar ? 'لا توجد بيانات كافية' : 'Not enough data yet'}
+            </div>
+          )
+          const maxRev = Math.max(...sorted.map(m => m.revenue), 1)
+          const chartH = 140
+          const barW = Math.min(40, Math.floor(280 / sorted.length))
+          const gap = 4
+
+          // حساب COGS تقريبي لكل شهر للرسم
+          const monthCogs = sorted.map(m => {
+            const mSales = sales.filter(s => s.sale_date.startsWith(m.month))
+            const qty = mSales.reduce((s, r) => s + (r.qty_tamriya||0)+(r.qty_fudge||0)+(r.qty_sultana||0)+(r.qty_snickers_fool||0)+(r.qty_snickers_bunduq||0), 0)
+            const avgCog = Object.keys(RECIPES).reduce((s, p) => s + cogPerPieceForMonth(p, m.month), 0) / Object.keys(RECIPES).length
+            return qty > 0 ? qty * (avgCog + PACKAGING_COST_PER_PIECE) : m.revenue * 0.30
+          })
+
+          const maxAll = Math.max(...sorted.map((m, i) => m.revenue), 1)
+
+          return (
+            <div className="space-y-5">
+              {/* ١. Revenue Trend */}
+              <div className="bg-white rounded-2xl shadow-sm p-4">
+                <p className="font-bold text-jumar-brown mb-1 text-sm">📈 {ar ? 'الإيرادات الشهرية' : 'Monthly Revenue'}</p>
+                <div className="overflow-x-auto">
+                  <svg width={Math.max(320, sorted.length * (barW + gap) + 40)} height={chartH + 40} className="block">
+                    {/* grid lines */}
+                    {[0, 0.25, 0.5, 0.75, 1].map(pct => (
+                      <g key={pct}>
+                        <line x1={30} y1={chartH - pct * chartH} x2={Math.max(320, sorted.length * (barW + gap) + 40) - 10} y2={chartH - pct * chartH} stroke="#f0f0f0" strokeWidth={1} />
+                        <text x={28} y={chartH - pct * chartH + 4} textAnchor="end" fontSize={9} fill="#aaa">{Math.round(maxAll * pct / 1000)}k</text>
+                      </g>
+                    ))}
+                    {/* bars */}
+                    {sorted.map((m, i) => {
+                      const x = 32 + i * (barW + gap)
+                      const barHeight = maxAll > 0 ? (m.revenue / maxAll) * chartH : 0
+                      const y = chartH - barHeight
+                      const netH = maxAll > 0 ? (Math.max(0, m.net) / maxAll) * chartH : 0
+                      const label = fmtMonth(m.month).replace(' 2026','').replace(' 2025','').replace(' 2024','')
+                      return (
+                        <g key={m.month}>
+                          <rect x={x} y={y} width={barW} height={barHeight} fill="#8B4513" rx={3} opacity={0.85} />
+                          <rect x={x} y={chartH - netH} width={barW} height={netH} fill={m.net >= 0 ? '#22c55e' : '#ef4444'} rx={3} opacity={0.7} />
+                          <text x={x + barW/2} y={chartH + 14} textAnchor="middle" fontSize={8} fill="#666">{label}</text>
+                          {barHeight > 20 && <text x={x + barW/2} y={y - 3} textAnchor="middle" fontSize={7} fill="#8B4513" fontWeight="bold">{Math.round(m.revenue/1000)}k</text>}
+                        </g>
+                      )
+                    })}
+                    <line x1={30} y1={0} x2={30} y2={chartH} stroke="#ddd" strokeWidth={1} />
+                    <line x1={30} y1={chartH} x2={Math.max(320, sorted.length * (barW + gap) + 40) - 10} y2={chartH} stroke="#ddd" strokeWidth={1} />
+                  </svg>
+                </div>
+                <div className="flex gap-3 mt-1 text-xs text-gray-500">
+                  <span><span className="inline-block w-3 h-2 bg-jumar-brown rounded mr-1" />{ar ? 'إيرادات' : 'Revenue'}</span>
+                  <span><span className="inline-block w-3 h-2 bg-green-500 rounded mr-1" />{ar ? 'صافي ربح' : 'Net Profit'}</span>
+                </div>
+              </div>
+
+              {/* ٢. Margin Trend */}
+              <div className="bg-white rounded-2xl shadow-sm p-4">
+                <p className="font-bold text-jumar-brown mb-1 text-sm">📉 {ar ? 'هامش الربح الإجمالي' : 'Gross Margin %'}</p>
+                <div className="overflow-x-auto">
+                  <svg width={Math.max(320, sorted.length * (barW + gap) + 40)} height={chartH + 40} className="block">
+                    {[0, 25, 50, 75, 100].map(pct => (
+                      <g key={pct}>
+                        <line x1={30} y1={chartH - (pct/100) * chartH} x2={Math.max(320, sorted.length * (barW + gap) + 40) - 10} y2={chartH - (pct/100) * chartH} stroke="#f0f0f0" strokeWidth={1} />
+                        <text x={28} y={chartH - (pct/100) * chartH + 4} textAnchor="end" fontSize={9} fill="#aaa">{pct}%</text>
+                      </g>
+                    ))}
+                    {/* target line 40% */}
+                    <line x1={30} y1={chartH - 0.4 * chartH} x2={Math.max(320, sorted.length * (barW + gap) + 40) - 10} y2={chartH - 0.4 * chartH} stroke="#f59e0b" strokeWidth={1} strokeDasharray="4,3" />
+                    <text x={Math.max(320, sorted.length * (barW + gap) + 40) - 12} y={chartH - 0.4 * chartH - 3} fontSize={8} fill="#f59e0b" textAnchor="end">40%</text>
+
+                    {sorted.map((m, i) => {
+                      const grossMarginPct = m.revenue > 0 ? Math.max(0, (m.revenue - monthCogs[i]) / m.revenue) : 0
+                      const x = 32 + i * (barW + gap)
+                      const barH2 = grossMarginPct * chartH
+                      const label = fmtMonth(m.month).replace(' 2026','').replace(' 2025','').replace(' 2024','')
+                      const color = grossMarginPct >= 0.5 ? '#22c55e' : grossMarginPct >= 0.35 ? '#f59e0b' : '#ef4444'
+                      return (
+                        <g key={m.month}>
+                          <rect x={x} y={chartH - barH2} width={barW} height={barH2} fill={color} rx={3} opacity={0.8} />
+                          <text x={x + barW/2} y={chartH + 14} textAnchor="middle" fontSize={8} fill="#666">{label}</text>
+                          {barH2 > 16 && <text x={x + barW/2} y={chartH - barH2 - 3} textAnchor="middle" fontSize={7} fill={color} fontWeight="bold">{(grossMarginPct*100).toFixed(0)}%</text>}
+                        </g>
+                      )
+                    })}
+                    <line x1={30} y1={0} x2={30} y2={chartH} stroke="#ddd" strokeWidth={1} />
+                    <line x1={30} y1={chartH} x2={Math.max(320, sorted.length * (barW + gap) + 40) - 10} y2={chartH} stroke="#ddd" strokeWidth={1} />
+                  </svg>
+                </div>
+                <p className="text-xs text-amber-600 mt-1">⚠️ {ar ? 'الخط الأصفر = هدف 40%' : 'Yellow dashed = 40% target'}</p>
+              </div>
+
+              {/* ٣. Expenses Breakdown (latest month) */}
+              <div className="bg-white rounded-2xl shadow-sm p-4">
+                <p className="font-bold text-jumar-brown mb-3 text-sm">💸 {ar ? 'توزيع المصروفات' : 'Expense Breakdown'} — {fmtMonth(sorted[sorted.length - 1]?.month || '')}</p>
+                {(() => {
+                  const lastMonth = sorted[sorted.length - 1]?.month || ''
+                  const mExp = expenses.filter(e => e.expense_date.startsWith(lastMonth))
+                  const bycat: Record<string, number> = {}
+                  mExp.forEach(e => { bycat[e.category] = (bycat[e.category] || 0) + Number(e.amount) })
+                  const total = Object.values(bycat).reduce((s, v) => s + v, 0)
+                  const colors = ['#8B4513','#d97706','#16a34a','#7c3aed','#dc2626','#0891b2','#db2777','#65a30d']
+                  const entries = Object.entries(bycat).sort(([,a],[,b]) => b - a)
+                  if (total === 0) return <p className="text-xs text-gray-400 text-center py-4">{ar ? 'لا توجد مصروفات' : 'No expenses'}</p>
+                  return (
+                    <div className="space-y-2">
+                      {entries.map(([cat, v], i) => {
+                        const pct = total > 0 ? (v / total) * 100 : 0
+                        const catLabel = ar ? cat : (CATEGORY_EN[cat] || cat)
+                        return (
+                          <div key={cat}>
+                            <div className="flex justify-between text-xs mb-0.5">
+                              <span className="text-gray-600">{catLabel}</span>
+                              <span className="font-bold" style={{ color: colors[i % colors.length] }}>{fmt(v)} {cur} ({pct.toFixed(0)}%)</span>
+                            </div>
+                            <div className="w-full bg-gray-100 rounded-full h-2">
+                              <div className="h-2 rounded-full" style={{ width: `${pct}%`, backgroundColor: colors[i % colors.length] }} />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* ── Monthly Comparison ── */}
+        {tab === 'comparison' && (() => {
+          const sorted = [...monthlyData].sort((a, b) => a.month.localeCompare(b.month))
+          if (sorted.length < 2) return (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center text-amber-700 text-sm">
+              {ar ? 'تحتاج شهرين على الأقل للمقارنة' : 'Need at least 2 months to compare'}
+            </div>
+          )
+
+          // حساب بيانات كل شهر
+          const monthStats = sorted.map(m => {
+            const mSales = sales.filter(s => s.sale_date.startsWith(m.month))
+            const mExp = expenses.filter(e => e.expense_date.startsWith(m.month))
+            const qty = mSales.reduce((s, r) => s + (r.qty_tamriya||0)+(r.qty_fudge||0)+(r.qty_sultana||0)+(r.qty_snickers_fool||0)+(r.qty_snickers_bunduq||0), 0)
+            const avgCog = Object.keys(RECIPES).reduce((s, p) => s + cogPerPieceForMonth(p, m.month), 0) / Object.keys(RECIPES).length
+            const expBycat: Record<string, number> = {}
+            mExp.forEach(e => { expBycat[e.category] = (expBycat[e.category] || 0) + Number(e.amount) })
+            const cogsAdj = expBycat['تسوية COGS'] || 0
+            const cogs = qty > 0 ? qty * (avgCog + PACKAGING_COST_PER_PIECE) + cogsAdj : m.revenue * 0.30
+            const grossProfit = m.revenue - cogs
+            const grossMarginPct = m.revenue > 0 ? (grossProfit / m.revenue) * 100 : 0
+            const netMarginPct = m.revenue > 0 ? (m.net / m.revenue) * 100 : 0
+            const orders = mSales.length
+            const aov = orders > 0 ? m.revenue / orders : 0
+            return { month: m.month, revenue: m.revenue, expenses: m.expenses, net: m.net, cogs, grossProfit, grossMarginPct, netMarginPct, qty, orders, aov }
+          })
+
+          const delta = (curr: number, prev: number) => {
+            if (prev === 0) return null
+            const pct = ((curr - prev) / Math.abs(prev)) * 100
+            return pct
+          }
+
+          return (
+            <div className="space-y-4">
+              <p className="text-xs text-gray-400 text-center">{ar ? 'مقارنة كل الأشهر — الأحدث على اليمين' : 'All months compared — newest on right'}</p>
+
+              {/* جدول مقارنة */}
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-jumar-brown text-white">
+                        <th className="px-3 py-2 text-right font-bold sticky left-0 bg-jumar-brown">{ar ? 'المؤشر' : 'Metric'}</th>
+                        {monthStats.map(m => (
+                          <th key={m.month} className="px-3 py-2 text-center font-bold whitespace-nowrap">{fmtMonth(m.month)}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {[
+                        { label: ar ? '💰 الإيرادات' : '💰 Revenue', key: 'revenue' as const, fmt: (v: number) => `${fmt(v)} ${cur}`, color: 'text-green-600' },
+                        { label: ar ? '🏭 COGS' : '🏭 COGS', key: 'cogs' as const, fmt: (v: number) => `${fmt(v)} ${cur}`, color: 'text-orange-500' },
+                        { label: ar ? '📊 إجمالي ربح' : '📊 Gross Profit', key: 'grossProfit' as const, fmt: (v: number) => `${fmt(v)} ${cur}`, color: 'text-blue-600' },
+                        { label: ar ? '% هامش إجمالي' : '% Gross Margin', key: 'grossMarginPct' as const, fmt: (v: number) => `${v.toFixed(1)}%`, color: 'text-jumar-gold' },
+                        { label: ar ? '💸 مصروفات' : '💸 Expenses', key: 'expenses' as const, fmt: (v: number) => `${fmt(v)} ${cur}`, color: 'text-red-500' },
+                        { label: ar ? '✅ صافي ربح' : '✅ Net Profit', key: 'net' as const, fmt: (v: number) => `${v >= 0 ? '+' : ''}${fmt(v)} ${cur}`, color: (v: number) => v >= 0 ? 'text-green-600' : 'text-red-500' },
+                        { label: ar ? '% هامش صافي' : '% Net Margin', key: 'netMarginPct' as const, fmt: (v: number) => `${v.toFixed(1)}%`, color: (v: number) => v >= 0 ? 'text-green-600' : 'text-red-500' },
+                        { label: ar ? '📦 قطع مباعة' : '📦 Units Sold', key: 'qty' as const, fmt: (v: number) => v > 0 ? `${v}` : '—', color: 'text-jumar-brown' },
+                        { label: ar ? '🛍️ أوردرات' : '🛍️ Orders', key: 'orders' as const, fmt: (v: number) => `${v}`, color: 'text-jumar-brown' },
+                        { label: 'AOV', key: 'aov' as const, fmt: (v: number) => v > 0 ? `${fmt(v)} ${cur}` : '—', color: 'text-jumar-brown' },
+                      ].map(({ label, key, fmt: fmtFn, color }) => (
+                        <tr key={key} className="hover:bg-gray-50">
+                          <td className="px-3 py-2 font-medium text-gray-600 sticky left-0 bg-white whitespace-nowrap">{label}</td>
+                          {monthStats.map((m, i) => {
+                            const val = m[key]
+                            const prev = i > 0 ? monthStats[i-1][key] : null
+                            const d = prev !== null ? delta(val as number, prev as number) : null
+                            const colorClass = typeof color === 'function' ? color(val as number) : color
+                            return (
+                              <td key={m.month} className="px-3 py-2 text-center">
+                                <span className={`font-bold ${colorClass}`}>{fmtFn(val as number)}</span>
+                                {d !== null && Math.abs(d) > 0.5 && (
+                                  <span className={`block text-center text-xs mt-0.5 ${d >= 0 ? 'text-green-500' : 'text-red-400'}`}>
+                                    {d >= 0 ? '▲' : '▼'}{Math.abs(d).toFixed(0)}%
+                                  </span>
+                                )}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Best month highlight */}
+              {(() => {
+                const bestRevMonth = monthStats.reduce((best, m) => m.revenue > best.revenue ? m : best, monthStats[0])
+                const bestNetMonth = monthStats.reduce((best, m) => m.net > best.net ? m : best, monthStats[0])
+                return (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-green-50 border border-green-200 rounded-2xl p-3 text-center">
+                      <p className="text-xs text-green-600 mb-1">🏆 {ar ? 'أعلى إيراد' : 'Top Revenue'}</p>
+                      <p className="font-bold text-green-700 text-sm">{fmtMonth(bestRevMonth.month)}</p>
+                      <p className="text-xs text-green-600">{fmt(bestRevMonth.revenue)} {cur}</p>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3 text-center">
+                      <p className="text-xs text-blue-600 mb-1">💎 {ar ? 'أعلى ربح صافي' : 'Best Net Profit'}</p>
+                      <p className="font-bold text-blue-700 text-sm">{fmtMonth(bestNetMonth.month)}</p>
+                      <p className="text-xs text-blue-600">{fmt(bestNetMonth.net)} {cur}</p>
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+          )
+        })()}
+
         {/* ── P&L Statement ── */}
         {tab === 'pl' && (
           <div className="space-y-3">
@@ -1198,7 +1602,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                 <div key={product} className="bg-white rounded-2xl shadow-sm overflow-hidden">
                   <div className="p-4 bg-jumar-cream">
                     <div className="flex justify-between items-center">
-                      <p className="font-bold text-jumar-brown">{product}</p>
+                      <p className="font-bold text-jumar-brown">{ar ? product : (PRODUCT_EN[product] || product)}</p>
                       <span className={`text-sm font-bold px-2 py-0.5 rounded-full ${margin >= 40 ? 'bg-green-100 text-green-700' : margin >= 20 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'}`}>
                         {ar ? 'هامش' : 'Margin'} {fmtPct(margin)}
                       </span>
@@ -1210,7 +1614,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                       const cost = ingData ? ingData.cost_per_gram * grams : 0
                       return (
                         <div key={ing} className="flex justify-between text-xs text-gray-600">
-                          <span>{ing} ({grams}ج)</span>
+                          <span>{ar ? ing : (INGREDIENT_EN[ing] || ing)} ({grams}{ar ? 'ج' : 'g'})</span>
                           <span>{cost.toFixed(2)} ج</span>
                         </div>
                       )
@@ -1321,7 +1725,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
               return (
                 <div key={channel} className="bg-white rounded-2xl p-4 shadow-sm">
                   <div className="flex justify-between items-center mb-2">
-                    <p className="font-bold text-jumar-brown text-lg">{channel}</p>
+                    <p className="font-bold text-jumar-brown text-lg">{ar ? channel : (CHANNEL_EN[channel] || channel)}</p>
                     <p className="text-xl font-bold text-green-600">{fmt(data.revenue)} {cur}</p>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-2 mb-3">
@@ -1637,12 +2041,47 @@ function FinanceTab({ lang }: { lang: Lang }) {
           )
 
           return (
-            <div className="space-y-4">
-              {/* اختيار الشهر */}
-              <div className="flex items-center gap-3 bg-white rounded-2xl p-4 shadow-sm">
+            <div className="space-y-4" id="monthly-report-print">
+              {/* اختيار الشهر + PDF */}
+              <div className="flex items-center gap-2 bg-white rounded-2xl p-3 shadow-sm">
                 <span className="text-sm font-bold text-jumar-brown flex-shrink-0">{ar ? 'الشهر:' : 'Month:'}</span>
                 <input type="month" value={reportMonth} onChange={e => setReportMonth(e.target.value)}
                   className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" />
+                <button
+                  onClick={() => {
+                    const printContent = document.getElementById('monthly-report-print')
+                    if (!printContent) return
+                    const win = window.open('', '_blank')
+                    if (!win) return
+                    win.document.write(`<!DOCTYPE html><html dir="${ar ? 'rtl' : 'ltr'}"><head>
+                      <meta charset="utf-8"><title>JUMAR – ${monthLabel}</title>
+                      <style>
+                        body{font-family:Arial,sans-serif;padding:24px;color:#222;direction:${ar ? 'rtl' : 'ltr'}}
+                        h1{color:#8B4513;margin-bottom:4px}
+                        .section{margin-bottom:20px;border:1px solid #eee;border-radius:8px;overflow:hidden}
+                        .section-header{background:#f5f0eb;padding:8px 12px;font-weight:bold;color:#8B4513;font-size:13px}
+                        .row{display:flex;justify-content:space-between;padding:6px 12px;border-bottom:1px solid #f5f5f5;font-size:12px}
+                        .row.indent{padding-right:24px;color:#666}
+                        .row.total{font-weight:bold;background:#f9f9f9}
+                        .green{color:#16a34a}.red{color:#dc2626}.gold{color:#d97706}
+                        .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+                        .tile{border:1px solid #eee;border-radius:8px;padding:12px;text-align:center}
+                        .tile .val{font-size:18px;font-weight:bold;margin-top:4px}
+                        .tile .lbl{font-size:10px;color:#888}
+                        @media print{body{padding:12px}}
+                      </style>
+                    </head><body>
+                      <h1>جُمار — JUMAR</h1>
+                      <p style="color:#888;font-size:12px;margin-bottom:16px">${ar ? 'التقرير المالي الشهري' : 'Monthly Financial Report'} · ${monthLabel}</p>
+                      ${printContent.innerHTML}
+                      <p style="font-size:10px;color:#aaa;margin-top:24px;text-align:center">Generated ${new Date().toLocaleDateString()}</p>
+                    </body></html>`)
+                    win.document.close()
+                    win.focus()
+                    setTimeout(() => win.print(), 400)
+                  }}
+                  className="flex-shrink-0 bg-jumar-brown text-white text-xs px-3 py-2 rounded-xl font-bold hover:bg-jumar-brown/80 transition-all"
+                >⬇️ PDF</button>
               </div>
 
               {mRevenue === 0 && (
@@ -1678,7 +2117,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                 <div className="divide-y divide-gray-50">
                   <Row label={ar ? 'إجمالي الإيرادات' : 'Total Revenue'} value={`${fmt(mRevenue)} ${cur}`} color="text-green-600" bold />
                   {Object.entries(byChannel).sort(([,a],[,b]) => b-a).map(([ch, v]) => (
-                    <Row key={ch} label={ch} value={`${fmt(v)} ${cur} (${mRevenue > 0 ? ((v/mRevenue)*100).toFixed(0) : 0}%)`} color="text-green-600" indent />
+                    <Row key={ch} label={ar ? ch : (CHANNEL_EN[ch] || ch)} value={`${fmt(v)} ${cur} (${mRevenue > 0 ? ((v/mRevenue)*100).toFixed(0) : 0}%)`} color="text-green-600" indent />
                   ))}
                   <div className="px-4 py-2 bg-gray-50">
                     <div className="flex justify-between text-xs text-gray-400">
@@ -1711,7 +2150,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                     <p className="text-xs text-jumar-gold mt-0.5">{ar ? 'هامش إجمالي' : 'Gross margin'}: {mGrossMargin.toFixed(1)}% {mGrossMargin >= 40 ? '✅' : mGrossMargin >= 30 ? '⚠️' : '❌'}</p>
                   </div>
                   {Object.entries(mExpByCategory).filter(([,v]) => v > 0).sort(([,a],[,b]) => b-a).map(([cat, v]) => (
-                    <Row key={cat} label={`(-) ${cat}`} value={`−${fmt(v)} ${cur}`} color="text-red-400" indent />
+                    <Row key={cat} label={`(-) ${ar ? cat : (CATEGORY_EN[cat] || cat)}`} value={`−${fmt(v)} ${cur}`} color="text-red-400" indent />
                   ))}
                   {mGiftQty > 0 && <Row label={`(-) ${ar ? `هدايا (${mGiftQty} قطعة)` : `Gifts (${mGiftQty} pcs)`}`} value={`−${fmt(mGiftQty * (mAvgCOG + PACKAGING_COST_PER_PIECE))} ${cur}`} color="text-orange-400" indent />}
                   <div className={`px-4 py-3 ${mNetProfit >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
@@ -1735,7 +2174,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                       return (
                         <div key={cat} className="px-4 py-3">
                           <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm font-semibold text-gray-700">{cat}</span>
+                            <span className="text-sm font-semibold text-gray-700">{ar ? cat : (CATEGORY_EN[cat] || cat)}</span>
                             <span className="text-sm font-bold text-red-500">{fmt(v)} {cur}</span>
                           </div>
                           <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1">
@@ -1893,78 +2332,9 @@ function FinanceTab({ lang }: { lang: Lang }) {
         )}
 
         {/* ── هامش ربح العلب ── */}
-        {tab === 'box_margins' && (() => {
-          const boxData = BOX_SIZES.map(({ label, pieces }) => {
-            const price = BOX_PRICE_MAP[pieces] || 0
-            const costPerPiece = avgCogPerPiece + PACKAGING_COST_PER_PIECE
-            const totalCost = costPerPiece * pieces
-            const profit = price - totalCost
-            const margin = price > 0 ? (profit / price) * 100 : 0
-            const salesCount = boxSalesCount[pieces] || 0
-            const totalRevForBox = salesCount * price
-            const shareOfTotal = totalRevenue > 0 ? (totalRevForBox / totalRevenue) * 100 : 0
-            return { label, pieces, price, totalCost, profit, margin, salesCount, totalRevForBox, shareOfTotal }
-          }).sort((a, b) => b.margin - a.margin)
-
-          const bestBox = boxData[0]
-          const mostSold = [...boxData].sort((a, b) => b.salesCount - a.salesCount)[0]
-
-          return (
-            <div className="space-y-4">
-              {/* ملخص */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
-                  <p className="text-xs text-green-600 mb-1">{ar ? 'أعلى هامش ربح' : 'Best Margin'}</p>
-                  <p className="text-xl font-bold text-green-700">{bestBox.label}</p>
-                  <p className="text-sm text-green-600">{bestBox.margin.toFixed(1)}%</p>
-                </div>
-                {mostSold.salesCount > 0 && (
-                  <div className="bg-jumar-brown text-white rounded-2xl p-4 text-center">
-                    <p className="text-xs text-white/60 mb-1">{ar ? 'الأكثر مبيعاً' : 'Best Seller'}</p>
-                    <p className="text-xl font-bold text-jumar-gold">{mostSold.label}</p>
-                    <p className="text-sm text-white/80">{mostSold.salesCount} {ar ? 'بيعة' : 'sales'}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* جدول العلب */}
-              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <p className="font-bold text-jumar-brown">{ar ? 'تفاصيل كل حجم علبة' : 'Box Size Breakdown'}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{ar ? `تكلفة القطعة: ${(avgCogPerPiece + PACKAGING_COST_PER_PIECE).toFixed(2)} ج` : `Cost/pc: ${(avgCogPerPiece + PACKAGING_COST_PER_PIECE).toFixed(2)} ${cur}`}</p>
-                </div>
-                <div className="divide-y divide-gray-50">
-                  {boxData.map(box => (
-                    <div key={box.pieces} className="p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-gray-800">{box.label}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${box.margin >= 50 ? 'bg-green-100 text-green-700' : box.margin >= 40 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'}`}>{box.margin.toFixed(1)}%</span>
-                        </div>
-                        <span className="font-bold text-jumar-brown">{fmt(box.price)} {cur}</span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2 mb-2 overflow-hidden">
-                        <div className={`h-2 rounded-full ${box.margin >= 50 ? 'bg-green-500' : box.margin >= 40 ? 'bg-amber-400' : 'bg-red-400'}`} style={{ width: `${Math.min(100, box.margin)}%` }} />
-                      </div>
-                      <div className="grid grid-cols-4 gap-1 text-center text-xs text-gray-500">
-                        <div><p className="text-gray-400">{ar ? 'تكلفة' : 'Cost'}</p><p className="font-bold text-red-500">{box.totalCost.toFixed(0)}{cur}</p></div>
-                        <div><p className="text-gray-400">{ar ? 'ربح' : 'Profit'}</p><p className="font-bold text-green-600">{box.profit.toFixed(0)}{cur}</p></div>
-                        <div><p className="text-gray-400">{ar ? 'مبيع' : 'Sold'}</p><p className="font-bold text-jumar-brown">{box.salesCount > 0 ? box.salesCount : '—'}</p></div>
-                        <div><p className="text-gray-400">{ar ? 'من الإيراد' : 'Share'}</p><p className="font-bold">{box.salesCount > 0 ? `${box.shareOfTotal.toFixed(1)}%` : '—'}</p></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {totalBoxSales === 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
-                  💡 {ar ? 'الأرقام في عمود "مبيع" بتيجي من items_desc في المبيعات. لو مكتوبة بشكل مختلف هتظهر صفر.' : 'Sales counts come from items_desc field. If descriptions differ, counts show zero.'}
-                </div>
-              )}
-            </div>
-          )
-        })()}
+        {tab === 'box_margins' && (
+          <BoxMarginsPanel ar={ar} cur={cur} avgCogPerPiece={avgCogPerPiece} cogPerPiece={cogPerPiece} boxSalesCount={boxSalesCount} totalRevenue={totalRevenue} fmt={fmt} />
+        )}
 
         {/* ── تنبيه المخزون المتقدم ── */}
         {tab === 'stock_alert' && (
@@ -1976,14 +2346,14 @@ function FinanceTab({ lang }: { lang: Lang }) {
                   {stockDaysLeft <= 5 ? '🚨' : '⚠️'} {ar ? `المخزون يكفي ${stockDaysLeft} يوم فقط` : `Stock covers only ${stockDaysLeft} days`}
                 </p>
                 <p className={`text-sm ${stockDaysLeft <= 5 ? 'text-red-100' : 'text-amber-600'}`}>
-                  {ar ? `أقل خامة: ${criticalIngredient}` : `Lowest: ${criticalIngredient}`}
+                  {ar ? `أقل خامة: ${criticalIngredient}` : `Lowest: ${INGREDIENT_EN[criticalIngredient] || criticalIngredient}`}
                 </p>
               </div>
             )}
             {stockDaysLeft !== null && stockDaysLeft > 14 && (
               <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
                 <p className="text-green-700 font-bold text-lg">✅ {ar ? `المخزون يكفي ~${stockDaysLeft} يوم` : `Stock covers ~${stockDaysLeft} days`}</p>
-                <p className="text-xs text-green-500 mt-1">{ar ? `أقل خامة: ${criticalIngredient}` : `Critical: ${criticalIngredient}`}</p>
+                <p className="text-xs text-green-500 mt-1">{ar ? `أقل خامة: ${criticalIngredient}` : `Critical: ${INGREDIENT_EN[criticalIngredient] || criticalIngredient}`}</p>
               </div>
             )}
 
@@ -2007,7 +2377,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                     <div key={ing.id} className={`p-4 ${isCritical ? 'bg-red-50' : isLow ? 'bg-amber-50' : ''}`}>
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <p className={`font-semibold ${isCritical ? 'text-red-700' : 'text-gray-800'}`}>{ing.name}</p>
+                          <p className={`font-semibold ${isCritical ? 'text-red-700' : 'text-gray-800'}`}>{ar ? ing.name : (INGREDIENT_EN[ing.name] || ing.name)}</p>
                           <p className="text-xs text-gray-400">{ing.stock_grams.toLocaleString()}g {ar ? 'متاح' : 'available'} · {ar ? 'حد أدنى' : 'min'}: {ing.min_stock}g</p>
                         </div>
                         <div className={`text-center px-3 py-1 rounded-xl ${isCritical ? 'bg-red-100' : isLow ? 'bg-amber-100' : 'bg-green-100'}`}>
@@ -2039,7 +2409,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                   const needed = Math.ceil(dailyUse * 30) // شراء لشهر
                   return (
                     <div key={ing.id} className="flex justify-between text-sm">
-                      <span className="text-white/80">{ing.name}</span>
+                      <span className="text-white/80">{ar ? ing.name : (INGREDIENT_EN[ing.name] || ing.name)}</span>
                       <span className="text-jumar-gold font-bold">{needed.toLocaleString()}g {ar ? 'لشهر' : 'for 1 mo.'}</span>
                     </div>
                   )
@@ -2120,7 +2490,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
               <form onSubmit={saveSale} className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className="text-xs text-gray-500 block mb-1">{ar ? 'التاريخ' : 'Date'}</label><input type="date" required value={saleForm.sale_date} onChange={e => setSaleForm({...saleForm, sale_date: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" /></div>
-                  <div><label className="text-xs text-gray-500 block mb-1">{ar ? 'القناة' : 'Channel'}</label><select value={saleForm.channel} onChange={e => setSaleForm({...saleForm, channel: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold">{CHANNELS.map(c => <option key={c}>{c}</option>)}</select></div>
+                  <div><label className="text-xs text-gray-500 block mb-1">{ar ? 'القناة' : 'Channel'}</label><select value={saleForm.channel} onChange={e => setSaleForm({...saleForm, channel: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold">{CHANNELS.map(c => <option key={c} value={c}>{ar ? c : (CHANNEL_EN[c] || c)}</option>)}</select></div>
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 block mb-1">{ar ? 'الكميات (اختياري)' : 'Quantities (optional)'}</label>
@@ -2132,7 +2502,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className="text-xs text-gray-500 block mb-1">{ar ? 'المبلغ (ج) *' : 'Amount (EGP) *'}</label><input type="number" required min="1" placeholder="0" value={saleForm.amount} onChange={e => setSaleForm({...saleForm, amount: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" /></div>
-                  <div><label className="text-xs text-gray-500 block mb-1">{ar ? 'نوع العميل' : 'Customer Type'}</label><select value={saleForm.customer_type} onChange={e => setSaleForm({...saleForm, customer_type: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold">{['غريب','قريب/معرفة','متنوع','غير محدد'].map(c => <option key={c}>{c}</option>)}</select></div>
+                  <div><label className="text-xs text-gray-500 block mb-1">{ar ? 'نوع العميل' : 'Customer Type'}</label><select value={saleForm.customer_type} onChange={e => setSaleForm({...saleForm, customer_type: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold">{['غريب','قريب/معرفة','متنوع','غير محدد'].map(c => <option key={c} value={c}>{ar ? c : (CUSTOMER_TYPE_EN[c] || c)}</option>)}</select></div>
                 </div>
                 <input placeholder={ar ? 'وصف الصنف' : 'Item description'} value={saleForm.items_desc} onChange={e => setSaleForm({...saleForm, items_desc: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" />
                 {msg && <p className={`text-sm text-center ${msg.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>{msg}</p>}
@@ -2161,7 +2531,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
               <form onSubmit={saveExpense} className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className="text-xs text-gray-500 block mb-1">{ar ? 'التاريخ' : 'Date'}</label><input type="date" required value={expenseForm.expense_date} onChange={e => setExpenseForm({...expenseForm, expense_date: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" /></div>
-                  <div><label className="text-xs text-gray-500 block mb-1">{ar ? 'الفئة' : 'Category'}</label><select value={expenseForm.category} onChange={e => setExpenseForm({...expenseForm, category: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold">{EXPENSE_CATEGORIES.map(c => <option key={c}>{c}</option>)}</select></div>
+                  <div><label className="text-xs text-gray-500 block mb-1">{ar ? 'الفئة' : 'Category'}</label><select value={expenseForm.category} onChange={e => setExpenseForm({...expenseForm, category: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold">{EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{ar ? c : (CATEGORY_EN[c] || c)}</option>)}</select></div>
                 </div>
                 <input required placeholder={ar ? 'الوصف *' : 'Description *'} value={expenseForm.description} onChange={e => setExpenseForm({...expenseForm, description: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" />
                 <input type="number" required min="1" placeholder={ar ? 'المبلغ (ج) *' : 'Amount (EGP) *'} value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" />
