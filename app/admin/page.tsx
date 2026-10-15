@@ -742,6 +742,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
   const [sales, setSales] = useState<Sale[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
+  const [priceHistory, setPriceHistory] = useState<{ingredient_name: string; cost_per_gram: number; effective_date: string}[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [bazaars, setBazaars] = useState<Bazaar[]>([])
   const [loading, setLoading] = useState(true)
@@ -749,21 +750,24 @@ function FinanceTab({ lang }: { lang: Lang }) {
   const [expenseForm, setExpenseForm] = useState({ expense_date: new Date().toISOString().split('T')[0], category: 'خامات', description: '', amount: '', notes: '' })
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
+  const [priceForm, setPriceForm] = useState({ ingredient_name: '', cost_per_gram: '', effective_date: new Date().toISOString().split('T')[0] })
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    const [{ data: salesData }, { data: expensesData }, { data: ingData }, { data: ordersData }, { data: bazaarsData }] = await Promise.all([
+    const [{ data: salesData }, { data: expensesData }, { data: ingData }, { data: ordersData }, { data: bazaarsData }, { data: priceHistoryData }] = await Promise.all([
       supabase.from('sales').select('*').order('sale_date', { ascending: false }),
       supabase.from('expenses').select('*').order('expense_date', { ascending: false }),
       supabase.from('ingredients').select('*').order('name'),
       supabase.from('orders').select('*, customers(name, area, phone), order_items(product_name, quantity)').order('created_at', { ascending: false }),
       supabase.from('bazaars').select('*').order('start_date', { ascending: false }),
+      supabase.from('ingredient_price_history').select('*').order('effective_date', { ascending: false }),
     ])
     if (salesData) setSales(salesData)
     if (expensesData) setExpenses(expensesData)
     if (ingData) setIngredients(ingData)
     if (ordersData) setOrders(ordersData)
     if (bazaarsData) setBazaars(bazaarsData)
+    if (priceHistoryData) setPriceHistory(priceHistoryData)
 
     const totalRevenue = (salesData || []).reduce((s: number, r: Sale) => s + Number(r.amount), 0)
     const totalExpenses = (expensesData || []).reduce((s: number, r: Expense) => s + Number(r.amount), 0)
@@ -789,13 +793,36 @@ function FinanceTab({ lang }: { lang: Lang }) {
   }
 
   // ── حسابات مالية مشتركة ──────────────────────────────────────────────────
-  // COGS: تكلفة الخامات لكل قطعة لكل منتج
+
+  // جيب سعر الخامة في شهر معين من price history
+  function getCostForMonth(ingName: string, month: string): number {
+    // جيب كل الأسعار للخامة دي اللي تاريخها <= الشهر ده
+    const relevant = priceHistory
+      .filter(p => p.ingredient_name === ingName && p.effective_date.substring(0, 7) <= month)
+      .sort((a, b) => b.effective_date.localeCompare(a.effective_date))
+    if (relevant.length > 0) return relevant[0].cost_per_gram
+    // fallback: السعر الحالي من ingredients
+    const ing = ingredients.find(i => i.name === ingName)
+    if (ing) return ing.cost_per_gram
+    return DEFAULT_INGREDIENTS.find(i => i.name === ingName)?.cost_per_gram || 0
+  }
+
+  // COGS: تكلفة الخامات لكل قطعة لكل منتج (للشهر الحالي)
   function cogPerPiece(product: string): number {
     const recipe = RECIPES[product]
     if (!recipe) return 0
     return Object.entries(recipe).reduce((sum, [ingName, grams]) => {
       const ing = ingredients.find(i => i.name === ingName)
       return sum + (ing ? ing.cost_per_gram * grams : 0)
+    }, 0)
+  }
+
+  // COGS لشهر معين من price history
+  function cogPerPieceForMonth(product: string, month: string): number {
+    const recipe = RECIPES[product]
+    if (!recipe) return 0
+    return Object.entries(recipe).reduce((sum, [ingName, grams]) => {
+      return sum + getCostForMonth(ingName, month) * grams
     }, 0)
   }
 
@@ -1554,25 +1581,22 @@ function FinanceTab({ lang }: { lang: Lang }) {
           const mOrderCount = mSales.length
           const mAOV = mOrderCount > 0 ? mRevenue / mOrderCount : 0
 
-          // COGS
+          // COGS — بيستخدم أسعار الشهر من ingredient_price_history
           const mAvgCOG = (() => {
-            const products = Object.entries(RECIPES).filter(([n]) => n !== 'سنيكرز البندق')
-            const costs = products.map(([, recipe]) => Object.entries(recipe).reduce((sum, [ing, g]) => {
-              const found = ingredients.find(i => i.name === ing) || DEFAULT_INGREDIENTS.find(i => i.name === ing)
-              return sum + (found ? found.cost_per_gram * g : 0)
-            }, 0))
+            const products = Object.keys(RECIPES).filter(n => n !== 'سنيكرز البندق')
+            const costs = products.map(p => cogPerPieceForMonth(p, reportMonth))
             return costs.length ? costs.reduce((a, x) => a + x, 0) / costs.length : 7.3
           })()
+          // مصروفات
+          const mTotalExpenses = mExpenses.reduce((s, e) => s + Number(e.amount), 0)
+          const mExpByCategory: Record<string, number> = {}
+          mExpenses.forEach(e => { mExpByCategory[e.category] = (mExpByCategory[e.category] || 0) + Number(e.amount) })
+
           const mCOGSIngredients = mQtySold > 0 ? mQtySold * mAvgCOG : (mRevenue * 0.54)
           const mCOGSAdjustment = mExpByCategory['خامات'] || 0  // تسويات COGS مسجلة في expenses
           const mCOGS = mCOGSIngredients + mCOGSAdjustment
           const mGrossProfit = mRevenue - mCOGS
           const mGrossMargin = mRevenue > 0 ? (mGrossProfit / mRevenue) * 100 : 0
-
-          // مصروفات
-          const mTotalExpenses = mExpenses.reduce((s, e) => s + Number(e.amount), 0)
-          const mExpByCategory: Record<string, number> = {}
-          mExpenses.forEach(e => { mExpByCategory[e.category] = (mExpByCategory[e.category] || 0) + Number(e.amount) })
 
           // تصنيف المصروفات
           const mMarketing = (mExpByCategory['تسويق'] || 0)
@@ -2028,6 +2052,62 @@ function FinanceTab({ lang }: { lang: Lang }) {
                   <p className="text-white/60 text-sm">{ar ? 'مفيش خامات تحتاج شراء دلوقتي ✅' : 'No reorders needed now ✅'}</p>
                 )}
               </div>
+            </div>
+
+            {/* تحديث سعر خامة */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <h2 className="font-bold text-jumar-brown mb-3">💰 {ar ? 'تسجيل سعر خامة جديد' : 'Update Ingredient Price'}</h2>
+              <form onSubmit={async e => {
+                e.preventDefault()
+                setSaving(true)
+                await supabase.from('ingredient_price_history').insert({
+                  ingredient_name: priceForm.ingredient_name,
+                  cost_per_gram: Number(priceForm.cost_per_gram),
+                  effective_date: priceForm.effective_date,
+                })
+                await loadData()
+                setMsg(ar ? '✅ تم تسجيل السعر الجديد' : '✅ Price updated')
+                setPriceForm({ ingredient_name: '', cost_per_gram: '', effective_date: new Date().toISOString().split('T')[0] })
+                setSaving(false)
+                setTimeout(() => setMsg(''), 3000)
+              }} className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">{ar ? 'الخامة' : 'Ingredient'}</label>
+                    <select required value={priceForm.ingredient_name} onChange={e => setPriceForm({...priceForm, ingredient_name: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold">
+                      <option value="">{ar ? 'اختار خامة' : 'Select'}</option>
+                      {DEFAULT_INGREDIENTS.map(i => <option key={i.name} value={i.name}>{i.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">{ar ? 'السعر (ج/جرام)' : 'Cost/gram'}</label>
+                    <input type="number" required step="0.001" min="0" placeholder="0.000" value={priceForm.cost_per_gram} onChange={e => setPriceForm({...priceForm, cost_per_gram: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">{ar ? 'تاريخ التطبيق' : 'Effective Date'}</label>
+                  <input type="date" required value={priceForm.effective_date} onChange={e => setPriceForm({...priceForm, effective_date: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-jumar-gold" />
+                </div>
+                <button type="submit" disabled={saving} className="w-full bg-jumar-gold text-white rounded-xl py-2.5 font-bold text-sm disabled:opacity-50">
+                  {saving ? '...' : ar ? 'حفظ السعر' : 'Save Price'}
+                </button>
+                {msg && <p className="text-center text-green-600 text-sm">{msg}</p>}
+              </form>
+              {/* سجل الأسعار */}
+              {priceHistory.length > 0 && (
+                <div className="mt-4 border-t pt-3">
+                  <p className="text-xs text-gray-500 font-bold mb-2">{ar ? 'آخر تحديثات الأسعار' : 'Recent Price Updates'}</p>
+                  <div className="space-y-1">
+                    {priceHistory.slice(0, 8).map(p => (
+                      <div key={p.effective_date + p.ingredient_name} className="flex justify-between text-xs text-gray-600">
+                        <span>{p.ingredient_name}</span>
+                        <span className="text-jumar-gold font-bold">{p.cost_per_gram} ج/ج</span>
+                        <span className="text-gray-400">{p.effective_date.substring(0, 7)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
