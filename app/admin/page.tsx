@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Order, OrderStatus, STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
+import { Order, OrderStatus, STATUS_LABELS, STATUS_LABELS_EN, STATUS_COLORS } from '@/lib/types'
 
 const ADMIN_PASSWORD = 'jumar2026'
 const WHATSAPP_SENDER = '201XXXXXXXXX' // ← غيّر ده لرقم واتساب جُمار
@@ -93,6 +93,9 @@ const PRODUCT_EN: Record<string, string> = {
   'فدج الكاجو':    'Cashew Fudge',
   'سنيكرز الفول':  'Peanut Snickers',
   'سنيكرز البندق': 'Hazelnut Snickers',
+  // short forms used in flavor analytics
+  'سنيكرز فول':   'Peanut Snickers',
+  'سنيكرز بندق':  'Hazelnut Snickers',
 }
 const CATEGORY_EN: Record<string, string> = {
   'خامات':       'Raw Materials',
@@ -130,9 +133,12 @@ const INGREDIENT_EN: Record<string, string> = {
   'زيت جوز الهند':  'Coconut Oil',
 }
 const CUSTOMER_TYPE_EN: Record<string, string> = {
-  'غريب':     'New',
-  'عارف':     'Returning',
-  'متحمس':    'Loyal',
+  'غريب':          'New',
+  'عارف':          'Returning',
+  'متحمس':         'Loyal',
+  'قريب/معرفة':    'Friend/Referral',
+  'متنوع':         'Mixed',
+  'غير محدد':      'Unspecified',
 }
 
 function t(ar: boolean, arText: string, enMap: Record<string, string>): string {
@@ -322,7 +328,7 @@ function OrdersTab({ lang }: { lang: Lang }) {
         {(['all', 'pending', 'new', 'preparing', 'ready', 'shipped', 'delivered', 'cancelled'] as const).map(s => (
           <button key={s} onClick={() => setFilter(s)}
             className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-all ${filter === s ? 'bg-jumar-brown text-white' : 'bg-white text-gray-600 border border-gray-200'}`}>
-            {s === 'all' ? `${ar ? 'الكل' : 'All'} (${counts.all})` : `${STATUS_LABELS[s]} (${counts[s]})`}
+            {s === 'all' ? `${ar ? 'الكل' : 'All'} (${counts.all})` : `${ar ? STATUS_LABELS[s] : STATUS_LABELS_EN[s]} (${counts[s]})`}
           </button>
         ))}
       </div>
@@ -361,7 +367,7 @@ function OrdersTab({ lang }: { lang: Lang }) {
 
               <div className="flex items-center gap-2 flex-wrap mb-3">
                 <span className={`px-3 py-1 rounded-full text-sm font-semibold ${STATUS_COLORS[order.status]}`}>
-                  {STATUS_LABELS[order.status]}
+                  {ar ? STATUS_LABELS[order.status] : STATUS_LABELS_EN[order.status]}
                 </span>
                 <div className="flex gap-1.5 flex-wrap">
                   {(['new', 'preparing', 'ready', 'shipped', 'delivered', 'cancelled'] as OrderStatus[])
@@ -369,7 +375,7 @@ function OrdersTab({ lang }: { lang: Lang }) {
                     .map(s => (
                       <button key={s} onClick={() => updateStatus(order, s)}
                         className="text-xs px-2.5 py-1 rounded-full border border-gray-200 text-gray-600 hover:border-jumar-gold hover:text-jumar-brown transition-all">
-                        {STATUS_LABELS[s]}
+                        {ar ? STATUS_LABELS[s] : STATUS_LABELS_EN[s]}
                       </button>
                     ))}
                 </div>
@@ -609,8 +615,8 @@ function InventoryTab({ lang }: { lang: Lang }) {
                 return (
                   <div key={ing.id} className="bg-white rounded-xl p-4 shadow-sm">
                     <div className="flex justify-between items-center mb-2">
-                      <div><span className="font-bold text-gray-800">{ing.name}</span>{low && <span className="mr-2 text-xs text-red-500 font-semibold">⚠️ منخفض</span>}</div>
-                      <div className="text-left"><span className={`font-bold text-lg ${low ? 'text-red-600' : 'text-jumar-brown'}`}>{ing.stock_grams.toLocaleString('ar-EG')}</span><span className="text-xs text-gray-400 mr-1">جرام</span></div>
+                      <div><span className="font-bold text-gray-800">{ar ? ing.name : (INGREDIENT_EN[ing.name] || ing.name)}</span>{low && <span className="mr-2 text-xs text-red-500 font-semibold">{ar ? '⚠️ منخفض' : '⚠️ Low'}</span>}</div>
+                      <div className="text-left"><span className={`font-bold text-lg ${low ? 'text-red-600' : 'text-jumar-brown'}`}>{ing.stock_grams.toLocaleString(ar ? 'ar-EG' : 'en-US')}</span><span className="text-xs text-gray-400 mr-1">{ar ? 'جرام' : 'g'}</span></div>
                     </div>
                     <div className="w-full bg-gray-100 rounded-full h-2"><div className={`h-2 rounded-full ${low ? 'bg-red-400' : 'bg-jumar-gold'}`} style={{ width: `${pct}%` }} /></div>
                     <div className="flex justify-between mt-1"><span className="text-xs text-gray-400">{ar ? 'الحد الأدنى' : 'Min'}: {ing.min_stock}g</span><span className="text-xs text-gray-400">{ing.cost_per_gram.toFixed(2)} {ar ? 'ج/جرام' : 'EGP/g'}</span></div>
@@ -676,7 +682,7 @@ function InventoryTab({ lang }: { lang: Lang }) {
               <p className="text-xs text-gray-400 text-center">{ar ? 'دخّل عدد العلب اللي عايز تعملها → يطلع المطلوب من كل خامة' : 'Enter box quantities → get required ingredients'}</p>
               {Object.keys(RECIPES).map(product => (
                 <div key={product} className="bg-white rounded-2xl p-4 shadow-sm">
-                  <p className="font-bold text-jumar-brown mb-3">{product}</p>
+                  <p className="font-bold text-jumar-brown mb-3">{ar ? product : (PRODUCT_EN[product] || product)}</p>
                   <div className="grid grid-cols-3 gap-2">
                     {BOX_SIZES.map(({ label, pieces }) => (
                       <div key={pieces}>
@@ -706,9 +712,9 @@ function InventoryTab({ lang }: { lang: Lang }) {
                     const enough = ing ? ing.stock_grams >= grams : true
                     return (
                       <div key={name} className="flex justify-between items-center">
-                        <span className="text-sm text-white/80">{name}</span>
+                        <span className="text-sm text-white/80">{ar ? name : (INGREDIENT_EN[name] || name)}</span>
                         <div className="text-left">
-                          <span className={`font-bold ${enough ? 'text-jumar-gold' : 'text-red-300'}`}>{grams.toFixed(0)}ج</span>
+                          <span className={`font-bold ${enough ? 'text-jumar-gold' : 'text-red-300'}`}>{grams.toFixed(0)}{ar ? 'ج' : 'g'}</span>
                           {ing && <span className={`text-xs mr-2 ${enough ? 'text-white/40' : 'text-red-300'}`}>({enough ? `✓ ${ar ? 'متاح' : 'avail'} ${ing.stock_grams.toFixed(0)}g` : `✗ ${ar ? 'ناقص' : 'short'} ${(grams - ing.stock_grams).toFixed(0)}g`})</span>}
                         </div>
                       </div>
@@ -1317,12 +1323,8 @@ function FinanceTab({ lang }: { lang: Lang }) {
               {ar ? 'لا توجد بيانات كافية' : 'Not enough data yet'}
             </div>
           )
-          const maxRev = Math.max(...sorted.map(m => m.revenue), 1)
-          const chartH = 140
-          const barW = Math.min(40, Math.floor(280 / sorted.length))
-          const gap = 4
 
-          // حساب COGS تقريبي لكل شهر للرسم
+          // COGS per month
           const monthCogs = sorted.map(m => {
             const mSales = sales.filter(s => s.sale_date.startsWith(m.month))
             const qty = mSales.reduce((s, r) => s + (r.qty_tamriya||0)+(r.qty_fudge||0)+(r.qty_sultana||0)+(r.qty_snickers_fool||0)+(r.qty_snickers_bunduq||0), 0)
@@ -1330,117 +1332,307 @@ function FinanceTab({ lang }: { lang: Lang }) {
             return qty > 0 ? qty * (avgCog + PACKAGING_COST_PER_PIECE) : m.revenue * 0.30
           })
 
-          const maxAll = Math.max(...sorted.map((m, i) => m.revenue), 1)
+          const maxRev = Math.max(...sorted.map(m => m.revenue), 1)
+          const W = 320
+          const H = 180
+          const PAD = { t: 16, r: 12, b: 36, l: 44 }
+          const innerW = W - PAD.l - PAD.r
+          const innerH = H - PAD.t - PAD.b
+          const n = sorted.length
+          const barW = Math.max(18, Math.min(48, innerW / n - 8))
+          const gap = (innerW - barW * n) / Math.max(n - 1, 1)
+
+          const xPos = (i: number) => PAD.l + i * (barW + (n > 1 ? gap : 0)) + barW / 2
+          const yRev = (v: number) => PAD.t + innerH - (v / maxRev) * innerH
+
+          // smooth line path
+          const linePath = (pts: {x:number,y:number}[]) => {
+            if (pts.length < 2) return pts.length === 1 ? `M${pts[0].x},${pts[0].y}` : ''
+            let d = `M${pts[0].x},${pts[0].y}`
+            for (let i = 1; i < pts.length; i++) {
+              const cp1x = pts[i-1].x + (pts[i].x - pts[i-1].x) * 0.4
+              const cp2x = pts[i].x - (pts[i].x - pts[i-1].x) * 0.4
+              d += ` C${cp1x},${pts[i-1].y} ${cp2x},${pts[i].y} ${pts[i].x},${pts[i].y}`
+            }
+            return d
+          }
+
+          const shortLabel = (m: string) => {
+            const months: Record<string,string> = { '01': ar?'ي':'Jan','02': ar?'ف':'Feb','03': ar?'م':'Mar','04': ar?'أ':'Apr','05': ar?'مي':'May','06': ar?'يو':'Jun','07': ar?'يل':'Jul','08': ar?'أغ':'Aug','09': ar?'س':'Sep','10': ar?'أك':'Oct','11': ar?'ن':'Nov','12': ar?'د':'Dec' }
+            return months[m.split('-')[1]] || m
+          }
+
+          // chart colors
+          const BROWN = '#8B4513'
+          const GOLD = '#D4A017'
+          const GREEN = '#16a34a'
+          const RED = '#ef4444'
+
+          // revenue points
+          const revPts = sorted.map((m, i) => ({ x: xPos(i), y: yRev(m.revenue) }))
+          const netPts = sorted.map((m, i) => ({ x: xPos(i), y: yRev(Math.max(0, m.net)) }))
+
+          // area fill for revenue line
+          const areaPath = revPts.length > 1
+            ? `${linePath(revPts)} L${revPts[revPts.length-1].x},${PAD.t+innerH} L${revPts[0].x},${PAD.t+innerH} Z`
+            : ''
+
+          const gridVals = [0, 0.25, 0.5, 0.75, 1]
+
+          // margin data
+          const margins = sorted.map((m, i) => m.revenue > 0 ? Math.max(0, (m.revenue - monthCogs[i]) / m.revenue * 100) : 0)
+
+          // expense donut data
+          const lastMonth = sorted[sorted.length - 1]?.month || ''
+          const mExp = expenses.filter(e => e.expense_date.startsWith(lastMonth))
+          const bycat: Record<string, number> = {}
+          mExp.forEach(e => { bycat[e.category] = (bycat[e.category] || 0) + Number(e.amount) })
+          const expTotal = Object.values(bycat).reduce((s, v) => s + v, 0)
+          const SLICE_COLORS = ['#8B4513','#D4A017','#16a34a','#7c3aed','#0891b2','#db2777','#f97316','#65a30d']
+          const expEntries = Object.entries(bycat).sort(([,a],[,b]) => b - a)
+
+          // donut arcs
+          const donutArcs = (() => {
+            if (expTotal === 0) return []
+            const R = 52, cx = 80, cy = 72, thickness = 22
+            let angle = -Math.PI / 2
+            return expEntries.map(([cat, v], i) => {
+              const sweep = (v / expTotal) * 2 * Math.PI
+              const x1 = cx + R * Math.cos(angle)
+              const y1 = cy + R * Math.sin(angle)
+              const x2 = cx + R * Math.cos(angle + sweep)
+              const y2 = cy + R * Math.sin(angle + sweep)
+              const large = sweep > Math.PI ? 1 : 0
+              const ir = R - thickness
+              const ix1 = cx + ir * Math.cos(angle + sweep)
+              const iy1 = cy + ir * Math.sin(angle + sweep)
+              const ix2 = cx + ir * Math.cos(angle)
+              const iy2 = cy + ir * Math.sin(angle)
+              const path = `M${x1.toFixed(1)},${y1.toFixed(1)} A${R},${R} 0 ${large},1 ${x2.toFixed(1)},${y2.toFixed(1)} L${ix1.toFixed(1)},${iy1.toFixed(1)} A${ir},${ir} 0 ${large},0 ${ix2.toFixed(1)},${iy2.toFixed(1)} Z`
+              const result = { path, color: SLICE_COLORS[i % SLICE_COLORS.length], cat, v, pct: (v/expTotal*100).toFixed(0) }
+              angle += sweep
+              return result
+            })
+          })()
 
           return (
-            <div className="space-y-5">
-              {/* ١. Revenue Trend */}
-              <div className="bg-white rounded-2xl shadow-sm p-4">
-                <p className="font-bold text-jumar-brown mb-1 text-sm">📈 {ar ? 'الإيرادات الشهرية' : 'Monthly Revenue'}</p>
-                <div className="overflow-x-auto">
-                  <svg width={Math.max(320, sorted.length * (barW + gap) + 40)} height={chartH + 40} className="block">
-                    {/* grid lines */}
-                    {[0, 0.25, 0.5, 0.75, 1].map(pct => (
-                      <g key={pct}>
-                        <line x1={30} y1={chartH - pct * chartH} x2={Math.max(320, sorted.length * (barW + gap) + 40) - 10} y2={chartH - pct * chartH} stroke="#f0f0f0" strokeWidth={1} />
-                        <text x={28} y={chartH - pct * chartH + 4} textAnchor="end" fontSize={9} fill="#aaa">{Math.round(maxAll * pct / 1000)}k</text>
-                      </g>
-                    ))}
-                    {/* bars */}
-                    {sorted.map((m, i) => {
-                      const x = 32 + i * (barW + gap)
-                      const barHeight = maxAll > 0 ? (m.revenue / maxAll) * chartH : 0
-                      const y = chartH - barHeight
-                      const netH = maxAll > 0 ? (Math.max(0, m.net) / maxAll) * chartH : 0
-                      const label = fmtMonth(m.month).replace(' 2026','').replace(' 2025','').replace(' 2024','')
+            <div className="space-y-4">
+
+              {/* ١. Revenue + Net Profit — area line chart */}
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-jumar-brown text-sm">📈 {ar ? 'الإيرادات الشهرية' : 'Monthly Revenue'}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{ar ? 'إجمالي' : 'Total'}: {fmt(sorted.reduce((s,m)=>s+m.revenue,0))} {cur}</p>
+                  </div>
+                  <div className="flex gap-3 text-xs text-gray-500">
+                    <span className="flex items-center gap-1"><span className="w-6 h-0.5 rounded bg-jumar-brown inline-block" />{ar?'إيرادات':'Revenue'}</span>
+                    <span className="flex items-center gap-1"><span className="w-6 h-0.5 rounded bg-green-500 inline-block" />{ar?'صافي':'Net'}</span>
+                  </div>
+                </div>
+                <div className="px-2 pb-3 overflow-x-auto">
+                  <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="block w-full" style={{minWidth: 240}}>
+                    <defs>
+                      <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={BROWN} stopOpacity="0.18" />
+                        <stop offset="100%" stopColor={BROWN} stopOpacity="0.01" />
+                      </linearGradient>
+                      <linearGradient id="netGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={GREEN} stopOpacity="0.15" />
+                        <stop offset="100%" stopColor={GREEN} stopOpacity="0.01" />
+                      </linearGradient>
+                    </defs>
+                    {/* grid */}
+                    {gridVals.map(pct => {
+                      const y = PAD.t + innerH - pct * innerH
                       return (
-                        <g key={m.month}>
-                          <rect x={x} y={y} width={barW} height={barHeight} fill="#8B4513" rx={3} opacity={0.85} />
-                          <rect x={x} y={chartH - netH} width={barW} height={netH} fill={m.net >= 0 ? '#22c55e' : '#ef4444'} rx={3} opacity={0.7} />
-                          <text x={x + barW/2} y={chartH + 14} textAnchor="middle" fontSize={8} fill="#666">{label}</text>
-                          {barHeight > 20 && <text x={x + barW/2} y={y - 3} textAnchor="middle" fontSize={7} fill="#8B4513" fontWeight="bold">{Math.round(m.revenue/1000)}k</text>}
+                        <g key={pct}>
+                          <line x1={PAD.l} y1={y} x2={PAD.l+innerW} y2={y} stroke="#f0f0f0" strokeWidth={1} />
+                          <text x={PAD.l-4} y={y+3.5} textAnchor="end" fontSize={8} fill="#bbb">{Math.round(maxRev*pct/1000)}k</text>
                         </g>
                       )
                     })}
-                    <line x1={30} y1={0} x2={30} y2={chartH} stroke="#ddd" strokeWidth={1} />
-                    <line x1={30} y1={chartH} x2={Math.max(320, sorted.length * (barW + gap) + 40) - 10} y2={chartH} stroke="#ddd" strokeWidth={1} />
-                  </svg>
-                </div>
-                <div className="flex gap-3 mt-1 text-xs text-gray-500">
-                  <span><span className="inline-block w-3 h-2 bg-jumar-brown rounded mr-1" />{ar ? 'إيرادات' : 'Revenue'}</span>
-                  <span><span className="inline-block w-3 h-2 bg-green-500 rounded mr-1" />{ar ? 'صافي ربح' : 'Net Profit'}</span>
-                </div>
-              </div>
-
-              {/* ٢. Margin Trend */}
-              <div className="bg-white rounded-2xl shadow-sm p-4">
-                <p className="font-bold text-jumar-brown mb-1 text-sm">📉 {ar ? 'هامش الربح الإجمالي' : 'Gross Margin %'}</p>
-                <div className="overflow-x-auto">
-                  <svg width={Math.max(320, sorted.length * (barW + gap) + 40)} height={chartH + 40} className="block">
-                    {[0, 25, 50, 75, 100].map(pct => (
-                      <g key={pct}>
-                        <line x1={30} y1={chartH - (pct/100) * chartH} x2={Math.max(320, sorted.length * (barW + gap) + 40) - 10} y2={chartH - (pct/100) * chartH} stroke="#f0f0f0" strokeWidth={1} />
-                        <text x={28} y={chartH - (pct/100) * chartH + 4} textAnchor="end" fontSize={9} fill="#aaa">{pct}%</text>
-                      </g>
-                    ))}
-                    {/* target line 40% */}
-                    <line x1={30} y1={chartH - 0.4 * chartH} x2={Math.max(320, sorted.length * (barW + gap) + 40) - 10} y2={chartH - 0.4 * chartH} stroke="#f59e0b" strokeWidth={1} strokeDasharray="4,3" />
-                    <text x={Math.max(320, sorted.length * (barW + gap) + 40) - 12} y={chartH - 0.4 * chartH - 3} fontSize={8} fill="#f59e0b" textAnchor="end">40%</text>
-
+                    {/* revenue area */}
+                    {areaPath && <path d={areaPath} fill="url(#revGrad)" />}
+                    {/* net area */}
+                    {netPts.length > 1 && (
+                      <path d={`${linePath(netPts)} L${netPts[netPts.length-1].x},${PAD.t+innerH} L${netPts[0].x},${PAD.t+innerH} Z`} fill="url(#netGrad)" />
+                    )}
+                    {/* revenue line */}
+                    {revPts.length > 1 && <path d={linePath(revPts)} fill="none" stroke={BROWN} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />}
+                    {/* net line */}
+                    {netPts.length > 1 && <path d={linePath(netPts)} fill="none" stroke={GREEN} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="5,3" />}
+                    {/* dots + labels */}
                     {sorted.map((m, i) => {
-                      const grossMarginPct = m.revenue > 0 ? Math.max(0, (m.revenue - monthCogs[i]) / m.revenue) : 0
-                      const x = 32 + i * (barW + gap)
-                      const barH2 = grossMarginPct * chartH
-                      const label = fmtMonth(m.month).replace(' 2026','').replace(' 2025','').replace(' 2024','')
-                      const color = grossMarginPct >= 0.5 ? '#22c55e' : grossMarginPct >= 0.35 ? '#f59e0b' : '#ef4444'
+                      const x = xPos(i)
+                      const yr = yRev(m.revenue)
+                      const label = shortLabel(m.month)
                       return (
                         <g key={m.month}>
-                          <rect x={x} y={chartH - barH2} width={barW} height={barH2} fill={color} rx={3} opacity={0.8} />
-                          <text x={x + barW/2} y={chartH + 14} textAnchor="middle" fontSize={8} fill="#666">{label}</text>
-                          {barH2 > 16 && <text x={x + barW/2} y={chartH - barH2 - 3} textAnchor="middle" fontSize={7} fill={color} fontWeight="bold">{(grossMarginPct*100).toFixed(0)}%</text>}
+                          <circle cx={x} cy={yr} r={4} fill="white" stroke={BROWN} strokeWidth={2} />
+                          {m.revenue > 0 && <text x={x} y={yr - 8} textAnchor="middle" fontSize={8} fill={BROWN} fontWeight="bold">{Math.round(m.revenue/1000)}k</text>}
+                          <text x={x} y={H - 4} textAnchor="middle" fontSize={9} fill="#888">{label}</text>
                         </g>
                       )
                     })}
-                    <line x1={30} y1={0} x2={30} y2={chartH} stroke="#ddd" strokeWidth={1} />
-                    <line x1={30} y1={chartH} x2={Math.max(320, sorted.length * (barW + gap) + 40) - 10} y2={chartH} stroke="#ddd" strokeWidth={1} />
+                    {/* axes */}
+                    <line x1={PAD.l} y1={PAD.t} x2={PAD.l} y2={PAD.t+innerH} stroke="#e5e7eb" strokeWidth={1} />
+                    <line x1={PAD.l} y1={PAD.t+innerH} x2={PAD.l+innerW} y2={PAD.t+innerH} stroke="#e5e7eb" strokeWidth={1} />
                   </svg>
                 </div>
-                <p className="text-xs text-amber-600 mt-1">⚠️ {ar ? 'الخط الأصفر = هدف 40%' : 'Yellow dashed = 40% target'}</p>
               </div>
 
-              {/* ٣. Expenses Breakdown (latest month) */}
-              <div className="bg-white rounded-2xl shadow-sm p-4">
-                <p className="font-bold text-jumar-brown mb-3 text-sm">💸 {ar ? 'توزيع المصروفات' : 'Expense Breakdown'} — {fmtMonth(sorted[sorted.length - 1]?.month || '')}</p>
-                {(() => {
-                  const lastMonth = sorted[sorted.length - 1]?.month || ''
-                  const mExp = expenses.filter(e => e.expense_date.startsWith(lastMonth))
-                  const bycat: Record<string, number> = {}
-                  mExp.forEach(e => { bycat[e.category] = (bycat[e.category] || 0) + Number(e.amount) })
-                  const total = Object.values(bycat).reduce((s, v) => s + v, 0)
-                  const colors = ['#8B4513','#d97706','#16a34a','#7c3aed','#dc2626','#0891b2','#db2777','#65a30d']
-                  const entries = Object.entries(bycat).sort(([,a],[,b]) => b - a)
-                  if (total === 0) return <p className="text-xs text-gray-400 text-center py-4">{ar ? 'لا توجد مصروفات' : 'No expenses'}</p>
-                  return (
-                    <div className="space-y-2">
-                      {entries.map(([cat, v], i) => {
-                        const pct = total > 0 ? (v / total) * 100 : 0
-                        const catLabel = ar ? cat : (CATEGORY_EN[cat] || cat)
+              {/* ٢. Gross Margin — gradient bars */}
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-4 pt-4 pb-2">
+                  <p className="font-bold text-jumar-brown text-sm">📊 {ar ? 'هامش الربح الإجمالي' : 'Gross Margin %'}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{ar ? 'الخط المتقطع = هدف ٤٠٪' : 'Dashed line = 40% target'}</p>
+                </div>
+                <div className="px-2 pb-3 overflow-x-auto">
+                  <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="block w-full" style={{minWidth: 240}}>
+                    <defs>
+                      {margins.map((pct, i) => {
+                        const c = pct >= 50 ? ['#4ade80','#16a34a'] : pct >= 35 ? ['#fde68a','#f59e0b'] : ['#fca5a5','#ef4444']
                         return (
-                          <div key={cat}>
-                            <div className="flex justify-between text-xs mb-0.5">
-                              <span className="text-gray-600">{catLabel}</span>
-                              <span className="font-bold" style={{ color: colors[i % colors.length] }}>{fmt(v)} {cur} ({pct.toFixed(0)}%)</span>
-                            </div>
-                            <div className="w-full bg-gray-100 rounded-full h-2">
-                              <div className="h-2 rounded-full" style={{ width: `${pct}%`, backgroundColor: colors[i % colors.length] }} />
-                            </div>
-                          </div>
+                          <linearGradient key={i} id={`mg${i}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={c[0]} />
+                            <stop offset="100%" stopColor={c[1]} />
+                          </linearGradient>
                         )
                       })}
+                    </defs>
+                    {/* grid 0/25/50/75/100 */}
+                    {[0,25,50,75,100].map(p => {
+                      const y = PAD.t + innerH - (p/100) * innerH
+                      return (
+                        <g key={p}>
+                          <line x1={PAD.l} y1={y} x2={PAD.l+innerW} y2={y} stroke={p===40?'transparent':'#f0f0f0'} strokeWidth={1} />
+                          <text x={PAD.l-4} y={y+3.5} textAnchor="end" fontSize={8} fill="#bbb">{p}%</text>
+                        </g>
+                      )
+                    })}
+                    {/* target 40% dashed */}
+                    <line x1={PAD.l} y1={PAD.t + innerH * 0.6} x2={PAD.l+innerW} y2={PAD.t + innerH * 0.6} stroke={GOLD} strokeWidth={1.5} strokeDasharray="5,3" />
+                    <text x={PAD.l+innerW} y={PAD.t + innerH * 0.6 - 4} textAnchor="end" fontSize={8} fill={GOLD} fontWeight="bold">40%</text>
+                    {/* bars */}
+                    {sorted.map((m, i) => {
+                      const mg = margins[i]
+                      const barHeight = (mg / 100) * innerH
+                      const x = PAD.l + i * (barW + (n > 1 ? gap : 0))
+                      const y = PAD.t + innerH - barHeight
+                      return (
+                        <g key={m.month}>
+                          <rect x={x} y={y} width={barW} height={barHeight} fill={`url(#mg${i})`} rx={6} />
+                          {barHeight > 20 && <text x={x+barW/2} y={y-5} textAnchor="middle" fontSize={8} fill={mg>=50?'#16a34a':mg>=35?'#f59e0b':'#ef4444'} fontWeight="bold">{mg.toFixed(0)}%</text>}
+                          <text x={x+barW/2} y={H-4} textAnchor="middle" fontSize={9} fill="#888">{shortLabel(m.month)}</text>
+                        </g>
+                      )
+                    })}
+                    <line x1={PAD.l} y1={PAD.t} x2={PAD.l} y2={PAD.t+innerH} stroke="#e5e7eb" strokeWidth={1} />
+                    <line x1={PAD.l} y1={PAD.t+innerH} x2={PAD.l+innerW} y2={PAD.t+innerH} stroke="#e5e7eb" strokeWidth={1} />
+                  </svg>
+                </div>
+              </div>
+
+              {/* ٣. Expense Donut */}
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-jumar-brown text-sm">💸 {ar ? 'توزيع المصروفات' : 'Expense Breakdown'}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{fmtMonth(lastMonth)}</p>
+                  </div>
+                  {expTotal > 0 && <p className="text-sm font-bold text-red-500">{fmt(expTotal)} {cur}</p>}
+                </div>
+                {expTotal === 0
+                  ? <p className="text-xs text-gray-400 text-center py-6">{ar ? 'لا توجد مصروفات' : 'No expenses'}</p>
+                  : (
+                    <div className="flex gap-2 px-3 pb-4 items-start">
+                      {/* donut */}
+                      <svg width={160} height={144} viewBox="0 0 160 144" className="flex-shrink-0">
+                        {donutArcs.map((arc, i) => (
+                          <path key={i} d={arc.path} fill={arc.color} opacity={0.9} />
+                        ))}
+                        <text x={80} y={68} textAnchor="middle" fontSize={10} fill="#555" fontWeight="bold">{expEntries.length}</text>
+                        <text x={80} y={80} textAnchor="middle" fontSize={8} fill="#aaa">{ar?'فئات':'cats'}</text>
+                      </svg>
+                      {/* legend */}
+                      <div className="flex-1 space-y-1.5 pt-1 min-w-0">
+                        {expEntries.map(([cat, v], i) => {
+                          const pct = expTotal > 0 ? (v / expTotal * 100) : 0
+                          const catLabel = ar ? cat : (CATEGORY_EN[cat] || cat)
+                          return (
+                            <div key={cat} className="flex items-center gap-1.5 min-w-0">
+                              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: SLICE_COLORS[i % SLICE_COLORS.length] }} />
+                              <span className="text-xs text-gray-600 truncate flex-1">{catLabel}</span>
+                              <span className="text-xs font-bold text-gray-700 flex-shrink-0">{pct.toFixed(0)}%</span>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
                   )
-                })()}
+                }
               </div>
+
+              {/* ٤. Revenue vs Expenses stacked */}
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-4 pt-4 pb-2">
+                  <p className="font-bold text-jumar-brown text-sm">⚖️ {ar ? 'الإيرادات مقابل المصروفات' : 'Revenue vs Expenses'}</p>
+                </div>
+                <div className="px-2 pb-3 overflow-x-auto">
+                  {(() => {
+                    const maxVal = Math.max(...sorted.map(m => Math.max(m.revenue, m.expenses)), 1)
+                    const BH = 160
+                    const bPad = { t: 12, r: 12, b: 32, l: 44 }
+                    const bInnerW = W - bPad.l - bPad.r
+                    const bInnerH = BH - bPad.t - bPad.b
+                    const bBarW = Math.max(14, Math.min(36, bInnerW / n / 2 - 4))
+                    const slot = bInnerW / n
+                    return (
+                      <svg width={W} height={BH} viewBox={`0 0 ${W} ${BH}`} className="block w-full" style={{minWidth: 240}}>
+                        <defs>
+                          <linearGradient id="revBar" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#a0522d" />
+                            <stop offset="100%" stopColor="#8B4513" />
+                          </linearGradient>
+                          <linearGradient id="expBar" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#fca5a5" />
+                            <stop offset="100%" stopColor="#ef4444" />
+                          </linearGradient>
+                        </defs>
+                        {[0,0.25,0.5,0.75,1].map(p => {
+                          const y = bPad.t + bInnerH - p * bInnerH
+                          return (
+                            <g key={p}>
+                              <line x1={bPad.l} y1={y} x2={bPad.l+bInnerW} y2={y} stroke="#f0f0f0" strokeWidth={1} />
+                              <text x={bPad.l-4} y={y+3.5} textAnchor="end" fontSize={8} fill="#bbb">{Math.round(maxVal*p/1000)}k</text>
+                            </g>
+                          )
+                        })}
+                        {sorted.map((m, i) => {
+                          const cx = bPad.l + i * slot + slot / 2
+                          const rH = (m.revenue / maxVal) * bInnerH
+                          const eH = (m.expenses / maxVal) * bInnerH
+                          return (
+                            <g key={m.month}>
+                              <rect x={cx - bBarW - 2} y={bPad.t + bInnerH - rH} width={bBarW} height={rH} fill="url(#revBar)" rx={4} />
+                              <rect x={cx + 2} y={bPad.t + bInnerH - eH} width={bBarW} height={eH} fill="url(#expBar)" rx={4} />
+                              <text x={cx} y={BH - 4} textAnchor="middle" fontSize={9} fill="#888">{shortLabel(m.month)}</text>
+                            </g>
+                          )
+                        })}
+                        <line x1={bPad.l} y1={bPad.t} x2={bPad.l} y2={bPad.t+bInnerH} stroke="#e5e7eb" strokeWidth={1} />
+                        <line x1={bPad.l} y1={bPad.t+bInnerH} x2={bPad.l+bInnerW} y2={bPad.t+bInnerH} stroke="#e5e7eb" strokeWidth={1} />
+                      </svg>
+                    )
+                  })()}
+                </div>
+                <div className="flex gap-4 px-4 pb-3 text-xs text-gray-500">
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-jumar-brown inline-block" />{ar?'إيرادات':'Revenue'}</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-400 inline-block" />{ar?'مصروفات':'Expenses'}</span>
+                </div>
+              </div>
+
             </div>
           )
         })()}
@@ -1950,7 +2142,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                   const isFixed = FIXED_EXPENSE_CATEGORIES.includes(cat)
                   return (
                     <div key={cat} className="flex items-center gap-2">
-                      <span className="text-xs text-gray-600 w-20 flex-shrink-0">{cat}</span>
+                      <span className="text-xs text-gray-600 w-20 flex-shrink-0">{ar ? cat : (CATEGORY_EN[cat] || cat)}</span>
                       <div className="flex-1 bg-gray-100 rounded-full h-1.5">
                         <div className={`h-1.5 rounded-full ${isFixed ? 'bg-red-400' : 'bg-orange-400'}`} style={{ width: `${pct}%` }} />
                       </div>
@@ -2323,7 +2515,7 @@ function FinanceTab({ lang }: { lang: Lang }) {
                     return (
                       <div key={i} className="p-3 flex justify-between items-center">
                         <div>
-                          <p className="text-sm font-semibold text-gray-800">{order?.customers?.name || `عميل #${i+1}`}</p>
+                          <p className="text-sm font-semibold text-gray-800">{order?.customers?.name || `${ar ? 'عميل' : 'Customer'} #${i+1}`}</p>
                           <p className="text-xs text-gray-400">{order?.customers?.area || ''} · {c.count} {ar ? 'طلبات' : 'orders'}</p>
                         </div>
                         <div className="text-left">
@@ -2554,8 +2746,8 @@ function FinanceTab({ lang }: { lang: Lang }) {
                   const pct = totalOpex > 0 ? (total / totalOpex * 100).toFixed(1) : '0'
                   return (
                     <div key={cat} className="p-3 flex justify-between items-center">
-                      <div className="flex items-center gap-2 flex-1"><span className="text-sm text-gray-700">{cat}</span><div className="flex-1 bg-gray-100 rounded-full h-1.5 mx-2"><div className="bg-jumar-gold h-1.5 rounded-full" style={{ width: `${pct}%` }} /></div><span className="text-xs text-gray-400">{pct}%</span></div>
-                      <span className="font-bold text-red-500 text-sm mr-3">{fmt(total)} ج</span>
+                      <div className="flex items-center gap-2 flex-1"><span className="text-sm text-gray-700">{ar ? cat : (CATEGORY_EN[cat] || cat)}</span><div className="flex-1 bg-gray-100 rounded-full h-1.5 mx-2"><div className="bg-jumar-gold h-1.5 rounded-full" style={{ width: `${pct}%` }} /></div><span className="text-xs text-gray-400">{pct}%</span></div>
+                      <span className="font-bold text-red-500 text-sm mr-3">{fmt(total)} {cur}</span>
                     </div>
                   )
                 })}
@@ -2862,7 +3054,7 @@ function AnalyticsTab({ lang }: { lang: Lang }) {
             {topProducts.map(([name, count], i) => (
               <div key={name} className="flex items-center gap-3">
                 <span className="text-xs text-gray-400 w-4">{i + 1}</span>
-                <span className="text-sm text-gray-700 flex-1 min-w-0 truncate">{name}</span>
+                <span className="text-sm text-gray-700 flex-1 min-w-0 truncate">{ar ? name : (PRODUCT_EN[name] || name)}</span>
                 <div className="flex items-center gap-2">
                   <div className="w-24 bg-gray-100 rounded-full h-2">
                     <div className="bg-jumar-gold h-2 rounded-full" style={{ width: `${(count / maxProd) * 100}%` }} />
@@ -2883,7 +3075,7 @@ function AnalyticsTab({ lang }: { lang: Lang }) {
             {flavorEntries.map(([name, count], i) => (
               <div key={name} className="flex items-center gap-3">
                 <span className="text-xs text-gray-400 w-4">{i + 1}</span>
-                <span className="text-sm text-gray-700 flex-1">{name}</span>
+                <span className="text-sm text-gray-700 flex-1">{ar ? name : (PRODUCT_EN[name] || name)}</span>
                 <div className="flex items-center gap-2">
                   <div className="w-24 bg-gray-100 rounded-full h-2"><div className="bg-jumar-brown h-2 rounded-full" style={{ width: `${(count / maxFlavor) * 100}%` }} /></div>
                   <span className="text-sm font-bold text-jumar-brown w-8 text-left">{count}</span>
@@ -2901,7 +3093,7 @@ function AnalyticsTab({ lang }: { lang: Lang }) {
           <div className="space-y-2">
             {channelEntries.map(([channel, amount]) => (
               <div key={channel} className="flex items-center gap-3">
-                <span className="text-sm text-gray-700 flex-1">{channel}</span>
+                <span className="text-sm text-gray-700 flex-1">{ar ? channel : (CHANNEL_EN[channel] || channel)}</span>
                 <div className="flex items-center gap-2">
                   <div className="w-24 bg-gray-100 rounded-full h-2"><div className="bg-jumar-gold h-2 rounded-full" style={{ width: `${(amount / totalRevenue) * 100}%` }} /></div>
                   <span className="text-sm font-bold text-green-600 w-16 text-left">{fmt(amount)} {cur}</span>
